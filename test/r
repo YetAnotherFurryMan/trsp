@@ -1,0 +1,85 @@
+#!/bin/bash
+
+good(){
+	if [ $1 -ne 0 ]; then
+		echo Returned $1
+		exit $1
+	fi
+}
+
+rm -fr foo
+
+cd ..
+
+./build.sh
+good $?
+
+cd test
+
+cp ../build/trsp trsp
+
+echo Init foo
+./trsp init foo
+good $?
+
+echo Enter foo
+cd foo
+
+echo Create module a
+./trsp module a --template=c --exe
+good $?
+
+mkdir a/a
+echo "#warning Hello World" >> a/a/a.c
+
+echo Create module b
+./trsp module b -tc -e
+good $?
+
+echo Build default {zig, ninja}
+./trsp build
+good $?
+
+# ./build/a
+# good $?
+
+# ./build/b
+# good $?
+
+echo Build reconfigure {zig, make}
+./trsp build --builder=make
+good $?
+
+# ./build/a
+# good $?
+
+# ./build/b
+# good $?
+
+echo Build reconfigure {cmake, make}
+./trsp build --generator=cmake
+good $?
+
+./build/a
+good $?
+
+./build/b
+good $?
+
+echo Build reconfigure {cmake, ninja}
+./trsp build --builder=ninja
+good $?
+
+./build/a
+good $?
+
+./build/b
+good $?
+
+echo Release
+./trsp release
+good $?
+
+echo Leave foo
+cd ..
+
