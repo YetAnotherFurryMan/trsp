@@ -559,7 +559,7 @@ fn build(args: [][:0]const u8, allocator: mem.Allocator) !void {
     switch (generator) {
         BuildGen.Zig => {},
         BuildGen.CMake => {
-            try cmake.cmake(cwd, allocator);
+            try cmake.cmake(cwd, allocator, _build.value);
             log(Log.Inf, "Calling cmake...");
             switch(builder){
                 BuildBuilder.Ninja => {
@@ -603,7 +603,10 @@ fn release(args: [][:0]const u8, allocator: mem.Allocator) !void {
 
     const cwd = fs.cwd();
 
-    try cmake.cmake(cwd, allocator);
+    var _build = try loadBuild(cwd, allocator);
+    defer _build.deinit();
+
+    try cmake.cmake(cwd, allocator, _build.value);
     // TODO: Generate build files (use function)
 }
 
