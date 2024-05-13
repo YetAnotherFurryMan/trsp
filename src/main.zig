@@ -12,22 +12,31 @@ const Log = l.Log;
 const log = l.log;
 const logf = l.logf;
 
-const templateJSON = @import("template.json.zig");
+const templateJSON = @import("json/templates.json.zig");
 const Template = templateJSON.Template;
 const loadTemplates = templateJSON.load;
 
-const modulesJSON = @import("module.json.zig");
+const modulesJSON = @import("json/modules.json.zig");
 const ModType = modulesJSON.ModType;
 const Module = modulesJSON.Module;
 const loadModules = modulesJSON.load;
 
-const cmake = @import("./cmake.zig");
+const projectsJSON = @import("json/projects.json.zig");
+const Project = projectsJSON.Project;
+const loadProjects = projectsJSON.load;
 
-// TODO: Implement srcs and heads for libs in templates.
-const defaultBuildJSON = "{\"gen\":\"Zig\",\"builder\":\"Ninja\"}";
+const buildJSON = @import("json/build.json.zig");
+const BuildBuilder = buildJSON.BuildBuilder;
+const BuildGen = buildJSON.BuildGen;
+const Build = buildJSON.Build;
+const loadBuild = buildJSON.load;
+
+const cmake = @import("gen/cmake.zig");
+
+const defaultBuildJSON = "{\"name\":\"${name}\",\"gen\":\"Zig\",\"builder\":\"Ninja\"}";
 const defaultModulesJSON = "[]";
 const defaultProjectsJSON = "[]";
-const defaultTemplatesJSON = "[{\"name\":\"c\",\"exe\":{\"head\":[],\"src\":[{\"name\":\"main.c\",\"cnt\":\"#include <stdio.h>\\n\\nint main(int argc, const char** argv){\\n    printf(\\\"Hello World!\\\\n\\\");\\n    return 0;\\n}\\n\"}]},\"shared\":{\"head\":[],\"src\":[{\"name\":\"main.c\",\"cnt\":\"ala\"}]},\"static\":{\"head\":[],\"src\":[{\"name\":\"main.c\",\"cnt\":\"ala\"}]}}]";
+const defaultTemplatesJSON = "[{\"name\":\"c\",\"exe\":{\"head\":[],\"src\":[{\"name\":\"main.c\",\"cnt\":\"#include <stdio.h>\\n\\nint main(int argc, const char** argv){\\n    printf(\\\"Hello World!\\\\n\\\");\\n    return 0;\\n}\\n\"}]},\"shared\":{\"head\":[{\"name\":\"${module}.h\",\"cnt\":\"#ifndef _${module}_H_\\n#define _${module}_H_\\n\\nvoid hello();\\n\\n#endif\"}],\"src\":[{\"name\":\"${module}.c\",\"cnt\":\"#include <stdio.h>\\n\\nvoid hello(){\\n    printf(\\\"Hello World!\\\\n\\\");\\n}\\n\"}]},\"static\":{\"head\":[{\"name\":\"${module}.h\",\"cnt\":\"#ifndef _${module}_H_\\n#define _${module}_H_\\n\\nvoid hello();\\n\\n#endif\"}],\"src\":[{\"name\":\"${module}.c\",\"cnt\":\"#include <stdio.h>\\n\\nvoid hello(){\\n    printf(\\\"Hello World!\\\\n\\\");\\n}\\n\"}]}}]";
 
 const Err = error{
     NoArgs,
@@ -50,12 +59,6 @@ const Err = error{
 
 const ArgDescription = struct { short: u8, long: []const u8 };
 const Arg = struct { id: i64, value: ?[]const u8 };
-
-const BuildBuilder = enum { Make, Ninja };
-const BuildGen = enum { Zig, CMake };
-const Build = struct { gen: BuildGen, builder: BuildBuilder };
-
-const Project = []u8;
 
 fn amIProject() bool {
     const file = fs.cwd().openFile("trsp", .{}) catch {
@@ -111,6 +114,8 @@ pub fn main() !void {
         return build(taskArgs, allocator);
     } else if (mem.eql(u8, task, "release")) {
         return release(taskArgs, allocator);
+    } else if (mem.eql(u8, task, "set")) {
+        return set(taskArgs, allocator);
     } else {
         logf(Log.Err, "Unknown task: {s}", .{task});
         return Err.BadTask;
@@ -159,8 +164,6 @@ fn parseCLA(args: [][:0]const u8, desc: []const ArgDescription, allocator: mem.A
     return out;
 }
 
-const loadJSON = @import("loadJSON.zig").loadJSON;
-
 fn init(args: [][:0]const u8, allocator: mem.Allocator) !void {
     var cwd = fs.cwd();
     var name: []const u8 = ".";
@@ -202,7 +205,19 @@ fn init(args: [][:0]const u8, allocator: mem.Allocator) !void {
     var conf = try cwd.makeOpenPath("trsp.conf", .{});
     defer conf.close();
 
-    try conf.writeFile("build.json", defaultBuildJSON);
+    if(mem.eql(u8, name, ".")){
+        name = "root";
+        log(Log.War, "Using default project name: \"root\"!");
+        log(Log.Inf, "To change project name use:");
+        log(Log.Inf, "    ./trsp set --project-name=$NAME");
+    }
+
+    const myBuildJSON_size = mem.replacementSize(u8, defaultBuildJSON, "${name}", name);
+    const myBuildJSON = try allocator.alloc(u8, myBuildJSON_size);
+    defer allocator.free(myBuildJSON);
+    _ = mem.replace(u8, defaultBuildJSON, "${name}", name, myBuildJSON);
+
+    try conf.writeFile("build.json", myBuildJSON);
     try conf.writeFile("modules.json", defaultModulesJSON);
     try conf.writeFile("projects.json", defaultProjectsJSON);
     try conf.writeFile("templates.json", defaultTemplatesJSON);
@@ -319,7 +334,7 @@ fn module(argsx: [][:0]const u8, allocator: mem.Allocator) !void {
     var modules = try loadModules(cwd, allocator);
     defer modules.deinit();
 
-    var projects = try loadJSON([]Project, cwd, allocator, "trsp.conf/projects.json");
+    var projects = try loadProjects(cwd, allocator);
     defer projects.deinit();
 
     var templates = try loadTemplates(cwd, allocator);
@@ -392,13 +407,12 @@ fn module(argsx: [][:0]const u8, allocator: mem.Allocator) !void {
         },
     };
 
-    // TODO: Rethink how headers are stored inside a template
-    // TODO: Make a way of inserting module name into cnt and maybe name too
     for (tmplMode.src) |file| {
-        var f = try moduleDir.createFile(file.name, .{});
-        defer f.close();
+        try templateJSON.write(moduleDir, allocator, file, name.?);
+    }
 
-        _ = try f.write(file.cnt);
+    for (tmplMode.head) |file| {
+        try templateJSON.write(cwd, allocator, file, name.?);
     }
 
     logf(Log.Inf, "Registering module \"{s}\"...", .{name.?});
@@ -507,7 +521,7 @@ fn build(args: [][:0]const u8, allocator: mem.Allocator) !void {
         }
     }
 
-    var _build = try loadJSON(Build, cwd, allocator, "trsp.conf/build.json");
+    var _build = try loadBuild(cwd, allocator);
     defer _build.deinit();
 
     log(Log.Inf, "Validating data...");
@@ -545,7 +559,7 @@ fn build(args: [][:0]const u8, allocator: mem.Allocator) !void {
     switch (generator) {
         BuildGen.Zig => {},
         BuildGen.CMake => {
-            try cmake.cmake(cwd, allocator);
+            try cmake.cmake(cwd, allocator, _build.value);
             log(Log.Inf, "Calling cmake...");
             switch(builder){
                 BuildBuilder.Ninja => {
@@ -589,6 +603,16 @@ fn release(args: [][:0]const u8, allocator: mem.Allocator) !void {
 
     const cwd = fs.cwd();
 
-    try cmake.cmake(cwd, allocator);
+    var _build = try loadBuild(cwd, allocator);
+    defer _build.deinit();
+
+    try cmake.cmake(cwd, allocator, _build.value);
     // TODO: Generate build files (use function)
 }
+
+fn set(args: [][:0]const u8, allocator: mem.Allocator) !void {
+    _ = args;
+    _ = allocator;
+    log(Log.War, "Not implemented yet.");
+}
+

@@ -36,6 +36,14 @@ echo Create module b
 ./trsp module b -tc -e
 good $?
 
+echo Create module c
+./trsp module c -tc -l
+good $?
+
+echo Create module d
+./trsp module d -tc -d
+good $?
+
 echo Build default {zig, ninja}
 ./trsp build
 good $?
