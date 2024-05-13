@@ -2,12 +2,12 @@ const std = @import("std");
 const mem = std.mem;
 const fs = std.fs;
 
-const l = @import("./log.zig");
+const l = @import("../log.zig");
 const Log = l.Log;
 const log = l.log;
 const logf = l.logf;
 
-const modulesJSON = @import("modules.json.zig");
+const modulesJSON = @import("../json/modules.json.zig");
 const loadModules = modulesJSON.load;
 
 // TODO: Needs:

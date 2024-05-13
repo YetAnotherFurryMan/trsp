@@ -12,26 +12,26 @@ const Log = l.Log;
 const log = l.log;
 const logf = l.logf;
 
-const templateJSON = @import("templates.json.zig");
+const templateJSON = @import("json/templates.json.zig");
 const Template = templateJSON.Template;
 const loadTemplates = templateJSON.load;
 
-const modulesJSON = @import("modules.json.zig");
+const modulesJSON = @import("json/modules.json.zig");
 const ModType = modulesJSON.ModType;
 const Module = modulesJSON.Module;
 const loadModules = modulesJSON.load;
 
-const projectsJSON = @import("projects.json.zig");
+const projectsJSON = @import("json/projects.json.zig");
 const Project = projectsJSON.Project;
 const loadProjects = projectsJSON.load;
 
-const buildJSON = @import("build.json.zig");
+const buildJSON = @import("json/build.json.zig");
 const BuildBuilder = buildJSON.BuildBuilder;
 const BuildGen = buildJSON.BuildGen;
 const Build = buildJSON.Build;
 const loadBuild = buildJSON.load;
 
-const cmake = @import("./cmake.zig");
+const cmake = @import("gen/cmake.zig");
 
 const defaultBuildJSON = "{\"gen\":\"Zig\",\"builder\":\"Ninja\"}";
 const defaultModulesJSON = "[]";

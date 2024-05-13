@@ -3,7 +3,7 @@ const json = std.json;
 const mem = std.mem;
 const fs = std.fs;
 
-const l = @import("log.zig");
+const l = @import("../log.zig");
 const logf = l.logf;
 const Log = l.Log;
 
