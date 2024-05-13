@@ -12,18 +12,27 @@ const Log = l.Log;
 const log = l.log;
 const logf = l.logf;
 
-const templateJSON = @import("template.json.zig");
+const templateJSON = @import("templates.json.zig");
 const Template = templateJSON.Template;
 const loadTemplates = templateJSON.load;
 
-const modulesJSON = @import("module.json.zig");
+const modulesJSON = @import("modules.json.zig");
 const ModType = modulesJSON.ModType;
 const Module = modulesJSON.Module;
 const loadModules = modulesJSON.load;
 
+const projectsJSON = @import("projects.json.zig");
+const Project = projectsJSON.Project;
+const loadProjects = projectsJSON.load;
+
+const buildJSON = @import("build.json.zig");
+const BuildBuilder = buildJSON.BuildBuilder;
+const BuildGen = buildJSON.BuildGen;
+const Build = buildJSON.Build;
+const loadBuild = buildJSON.load;
+
 const cmake = @import("./cmake.zig");
 
-// TODO: Implement srcs and heads for libs in templates.
 const defaultBuildJSON = "{\"gen\":\"Zig\",\"builder\":\"Ninja\"}";
 const defaultModulesJSON = "[]";
 const defaultProjectsJSON = "[]";
@@ -50,12 +59,6 @@ const Err = error{
 
 const ArgDescription = struct { short: u8, long: []const u8 };
 const Arg = struct { id: i64, value: ?[]const u8 };
-
-const BuildBuilder = enum { Make, Ninja };
-const BuildGen = enum { Zig, CMake };
-const Build = struct { gen: BuildGen, builder: BuildBuilder };
-
-const Project = []u8;
 
 fn amIProject() bool {
     const file = fs.cwd().openFile("trsp", .{}) catch {
@@ -158,8 +161,6 @@ fn parseCLA(args: [][:0]const u8, desc: []const ArgDescription, allocator: mem.A
     }
     return out;
 }
-
-const loadJSON = @import("loadJSON.zig").loadJSON;
 
 fn init(args: [][:0]const u8, allocator: mem.Allocator) !void {
     var cwd = fs.cwd();
@@ -319,7 +320,7 @@ fn module(argsx: [][:0]const u8, allocator: mem.Allocator) !void {
     var modules = try loadModules(cwd, allocator);
     defer modules.deinit();
 
-    var projects = try loadJSON([]Project, cwd, allocator, "trsp.conf/projects.json");
+    var projects = try loadProjects(cwd, allocator);
     defer projects.deinit();
 
     var templates = try loadTemplates(cwd, allocator);
@@ -506,7 +507,7 @@ fn build(args: [][:0]const u8, allocator: mem.Allocator) !void {
         }
     }
 
-    var _build = try loadJSON(Build, cwd, allocator, "trsp.conf/build.json");
+    var _build = try loadBuild(cwd, allocator);
     defer _build.deinit();
 
     log(Log.Inf, "Validating data...");

@@ -7,7 +7,7 @@ const Log = l.Log;
 const log = l.log;
 const logf = l.logf;
 
-const modulesJSON = @import("module.json.zig");
+const modulesJSON = @import("modules.json.zig");
 const loadModules = modulesJSON.load;
 
 // TODO: Needs:
