@@ -33,7 +33,7 @@ const loadBuild = buildJSON.load;
 
 const cmake = @import("gen/cmake.zig");
 
-const defaultBuildJSON = "{\"gen\":\"Zig\",\"builder\":\"Ninja\"}";
+const defaultBuildJSON = "{\"name\":\"${name}\",\"gen\":\"Zig\",\"builder\":\"Ninja\"}";
 const defaultModulesJSON = "[]";
 const defaultProjectsJSON = "[]";
 const defaultTemplatesJSON = "[{\"name\":\"c\",\"exe\":{\"head\":[],\"src\":[{\"name\":\"main.c\",\"cnt\":\"#include <stdio.h>\\n\\nint main(int argc, const char** argv){\\n    printf(\\\"Hello World!\\\\n\\\");\\n    return 0;\\n}\\n\"}]},\"shared\":{\"head\":[{\"name\":\"${module}.h\",\"cnt\":\"#ifndef _${module}_H_\\n#define _${module}_H_\\n\\nvoid hello();\\n\\n#endif\"}],\"src\":[{\"name\":\"${module}.c\",\"cnt\":\"#include <stdio.h>\\n\\nvoid hello(){\\n    printf(\\\"Hello World!\\\\n\\\");\\n}\\n\"}]},\"static\":{\"head\":[{\"name\":\"${module}.h\",\"cnt\":\"#ifndef _${module}_H_\\n#define _${module}_H_\\n\\nvoid hello();\\n\\n#endif\"}],\"src\":[{\"name\":\"${module}.c\",\"cnt\":\"#include <stdio.h>\\n\\nvoid hello(){\\n    printf(\\\"Hello World!\\\\n\\\");\\n}\\n\"}]}}]";
@@ -203,7 +203,16 @@ fn init(args: [][:0]const u8, allocator: mem.Allocator) !void {
     var conf = try cwd.makeOpenPath("trsp.conf", .{});
     defer conf.close();
 
-    try conf.writeFile("build.json", defaultBuildJSON);
+    if(mem.eql(u8, name, ".")){
+        name = "root";
+    }
+
+    const myBuildJSON_size = mem.replacementSize(u8, defaultBuildJSON, "${name}", name);
+    const myBuildJSON = try allocator.alloc(u8, myBuildJSON_size);
+    defer allocator.free(myBuildJSON);
+    _ = mem.replace(u8, defaultBuildJSON, "${name}", name, myBuildJSON);
+
+    try conf.writeFile("build.json", myBuildJSON);
     try conf.writeFile("modules.json", defaultModulesJSON);
     try conf.writeFile("projects.json", defaultProjectsJSON);
     try conf.writeFile("templates.json", defaultTemplatesJSON);

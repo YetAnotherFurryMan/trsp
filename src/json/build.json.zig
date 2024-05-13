@@ -5,7 +5,7 @@ const fs = std.fs;
 
 pub const BuildBuilder = enum { Make, Ninja };
 pub const BuildGen = enum { Zig, CMake };
-pub const Build = struct { gen: BuildGen, builder: BuildBuilder };
+pub const Build = struct { name: []u8, gen: BuildGen, builder: BuildBuilder };
 
 const loadJSON = @import("loadJSON.zig").loadJSON;
 
