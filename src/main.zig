@@ -114,6 +114,8 @@ pub fn main() !void {
         return build(taskArgs, allocator);
     } else if (mem.eql(u8, task, "release")) {
         return release(taskArgs, allocator);
+    } else if (mem.eql(u8, task, "set")) {
+        return set(taskArgs, allocator);
     } else {
         logf(Log.Err, "Unknown task: {s}", .{task});
         return Err.BadTask;
@@ -205,6 +207,9 @@ fn init(args: [][:0]const u8, allocator: mem.Allocator) !void {
 
     if(mem.eql(u8, name, ".")){
         name = "root";
+        log(Log.War, "Using default project name: \"root\"!");
+        log(Log.Inf, "To change project name use:");
+        log(Log.Inf, "    ./trsp set --project-name=$NAME");
     }
 
     const myBuildJSON_size = mem.replacementSize(u8, defaultBuildJSON, "${name}", name);
@@ -601,3 +606,10 @@ fn release(args: [][:0]const u8, allocator: mem.Allocator) !void {
     try cmake.cmake(cwd, allocator);
     // TODO: Generate build files (use function)
 }
+
+fn set(args: [][:0]const u8, allocator: mem.Allocator) !void {
+    _ = args;
+    _ = allocator;
+    log(Log.War, "Not implemented yet.");
+}
+
