@@ -27,7 +27,7 @@ const cmake = @import("./cmake.zig");
 const defaultBuildJSON = "{\"gen\":\"Zig\",\"builder\":\"Ninja\"}";
 const defaultModulesJSON = "[]";
 const defaultProjectsJSON = "[]";
-const defaultTemplatesJSON = "[{\"name\":\"c\",\"exe\":{\"head\":[],\"src\":[{\"name\":\"main.c\",\"cnt\":\"#include <stdio.h>\\n\\nint main(int argc, const char** argv){\\n    printf(\\\"Hello World!\\\\n\\\");\\n    return 0;\\n}\\n\"}]},\"shared\":{\"head\":[],\"src\":[{\"name\":\"main.c\",\"cnt\":\"ala\"}]},\"static\":{\"head\":[],\"src\":[{\"name\":\"main.c\",\"cnt\":\"ala\"}]}}]";
+const defaultTemplatesJSON = "[{\"name\":\"c\",\"exe\":{\"head\":[],\"src\":[{\"name\":\"main.c\",\"cnt\":\"#include <stdio.h>\\n\\nint main(int argc, const char** argv){\\n    printf(\\\"Hello World!\\\\n\\\");\\n    return 0;\\n}\\n\"}]},\"shared\":{\"head\":[{\"name\":\"${module}.h\",\"cnt\":\"#ifndef _${module}_H_\\n#define _${module}_H_\\n\\nvoid hello();\\n\\n#endif\"}],\"src\":[{\"name\":\"${module}.c\",\"cnt\":\"#include <stdio.h>\\n\\nvoid hello(){\\n    printf(\\\"Hello World!\\\\n\\\");\\n}\\n\"}]},\"static\":{\"head\":[{\"name\":\"${module}.h\",\"cnt\":\"#ifndef _${module}_H_\\n#define _${module}_H_\\n\\nvoid hello();\\n\\n#endif\"}],\"src\":[{\"name\":\"${module}.c\",\"cnt\":\"#include <stdio.h>\\n\\nvoid hello(){\\n    printf(\\\"Hello World!\\\\n\\\");\\n}\\n\"}]}}]";
 
 const Err = error{
     NoArgs,
@@ -392,13 +392,12 @@ fn module(argsx: [][:0]const u8, allocator: mem.Allocator) !void {
         },
     };
 
-    // TODO: Rethink how headers are stored inside a template
-    // TODO: Make a way of inserting module name into cnt and maybe name too
     for (tmplMode.src) |file| {
-        var f = try moduleDir.createFile(file.name, .{});
-        defer f.close();
+        try templateJSON.write(moduleDir, allocator, file, name.?);
+    }
 
-        _ = try f.write(file.cnt);
+    for (tmplMode.head) |file| {
+        try templateJSON.write(cwd, allocator, file, name.?);
     }
 
     logf(Log.Inf, "Registering module \"{s}\"...", .{name.?});
