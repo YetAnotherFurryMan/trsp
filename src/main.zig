@@ -32,6 +32,8 @@ const Build = buildJSON.Build;
 const loadBuild = buildJSON.load;
 
 const cmake = @import("gen/cmake.zig");
+const make = @import("gen/make.zig");
+const ninja = @import("gen/ninja.zig");
 
 const defaultBuildJSON = "{\"name\":\"${name}\",\"gen\":\"Zig\",\"builder\":\"Ninja\"}";
 const defaultModulesJSON = "[]";
@@ -55,6 +57,7 @@ const Err = error{
     BadGenerator,
     BadBuilder,
     Unreachable,
+    ChildError,
 };
 
 const ArgDescription = struct { short: u8, long: []const u8 };
@@ -457,6 +460,32 @@ fn cleanUpBuild() !void {
     };
 }
 
+fn runChild(argv: []const []const u8) !void {
+    logf(Log.Inf, "Running {s}...", .{argv[0]});
+
+    const res = try std.ChildProcess.run(.{
+        .allocator = std.heap.page_allocator,
+        .argv = argv
+    });
+
+    logf(Log.Deb, "    Term: {}", .{res.term});
+
+    switch(res.term) {
+        std.ChildProcess.Term.Exited => {
+            if(res.term.Exited != 0){
+                log(Log.Err, "Child error:");
+                logf(Log.Inf, "STDOUT:\n{s}\n[INFO]: STDERR:\n{s}", .{res.stdout, res.stderr});
+                return error.ChildError;
+            }
+        },
+        else => {
+            log(Log.Err, "Child error:");
+            logf(Log.Inf, "STDOUT:\n{s}\n[INFO]: STDERR:\n{s}", .{res.stdout, res.stderr});
+            return error.ChildError;
+        },
+    }
+}
+
 fn build(args: [][:0]const u8, allocator: mem.Allocator) !void {
     try ensureProject();
 
@@ -562,34 +591,28 @@ fn build(args: [][:0]const u8, allocator: mem.Allocator) !void {
     try cleanUpBuild();
 
     switch (generator) {
-        BuildGen.Zig => {},
-        BuildGen.CMake => {
-            try cmake.cmake(cwd, allocator, newBuild);
-            log(Log.Inf, "Calling cmake...");
+        BuildGen.Zig => {
             switch(builder){
                 BuildBuilder.Ninja => {
-                    _ = try std.ChildProcess.run(.{
-                        .allocator = std.heap.page_allocator,
-                        .argv = &[_][]const u8{"cmake", "-S", ".", "-B", "build", "-G", "Ninja"}
-                    });
-
-                    log(Log.Inf, "Calling Ninja...");
-                    _ = try std.ChildProcess.run(.{
-                        .allocator = std.heap.page_allocator,
-                        .argv = &[_][]const u8{"ninja", "-C", "build"}
-                    });
+                    try ninja.ninja(cwd, allocator, newBuild);
+                    try runChild(&[_][]const u8{"ninja"});
                 },
                 BuildBuilder.Make => {
-                    _ = try std.ChildProcess.run(.{
-                        .allocator = std.heap.page_allocator,
-                        .argv = &[_][]const u8{"cmake", "-S", ".", "-B", "build", "-G", "Ninja"}
-                    });
-
-                    log(Log.Inf, "Calling Make...");
-                    _ = try std.ChildProcess.run(.{
-                        .allocator = std.heap.page_allocator,
-                        .argv = &[_][]const u8{"make", "-C", "build"}
-                    });
+                    try make.make(cwd, allocator, newBuild);
+                    try runChild(&[_][]const u8{"make"});
+                },
+            }
+        },
+        BuildGen.CMake => {
+            try cmake.cmake(cwd, allocator, newBuild);
+            switch(builder){
+                BuildBuilder.Ninja => {
+                    try runChild(&[_][]const u8{"cmake", "-S", ".", "-B", "build", "-G", "Ninja"});
+                    try runChild(&[_][]const u8{"ninja", "-C", "build"});
+                },
+                BuildBuilder.Make => {
+                    try runChild(&[_][]const u8{"cmake", "-S", ".", "-B", "build", "-G", "Unix Makefiles"});
+                    try runChild(&[_][]const u8{"make", "-C", "build"});
                 },
             }
         },

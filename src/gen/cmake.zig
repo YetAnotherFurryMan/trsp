@@ -20,28 +20,7 @@ const Build = buildJSON.Build;
 // C++ std
 // Other languages like ZIG or Fortran
 
-fn listFiles(dir: fs.Dir, allocator: mem.Allocator) !std.ArrayList([]u8) {
-    var list = std.ArrayList([]u8).init(allocator);
-
-    var walker = try dir.walk(allocator);
-    defer walker.deinit();
-
-    while (try walker.next()) |entry| {
-        switch (entry.kind) {
-            fs.Dir.Entry.Kind.file => {
-                const path = try entry.dir.realpathAlloc(allocator, entry.basename);
-                defer allocator.free(path);
-
-                const dot = ".";
-                try list.append(try fs.path.relative(allocator, dot, path));
-            },
-            fs.Dir.Entry.Kind.directory => {},
-            else => {},
-        }
-    }
-
-    return list;
-}
+const listFiles = @import("listFiles.zig").listFiles;
 
 fn addModule(module: modulesJSON.Module, cmakelists: fs.File, cwd: fs.Dir, allocator: mem.Allocator) !void {
     var mdir = try cwd.openDir(module.name, .{ .iterate = true });
