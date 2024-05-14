@@ -643,6 +643,7 @@ fn release(args: [][:0]const u8, allocator: mem.Allocator) !void {
     defer _build.deinit();
 
     try cmake.cmake(cwd, allocator, _build.value);
+    try ninja.ninja(cwd, allocator, _build.value);
     // TODO: Generate build files (use function)
 }
 

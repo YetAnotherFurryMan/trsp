@@ -14,7 +14,6 @@ const buildJSON = @import("../json/build.json.zig");
 const Build = buildJSON.Build;
 
 // TODO: Needs:
-// Project name
 // Project version
 // C std
 // C++ std
