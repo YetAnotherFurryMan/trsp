@@ -553,13 +553,18 @@ fn build(args: [][:0]const u8, allocator: mem.Allocator) !void {
     logf(Log.Deb, "Generator: {}", .{generator});
     logf(Log.Deb, "Builder: {}", .{builder});
 
+    const newBuild: Build = .{
+        .name = _build.value.name,
+        .builder = builder,
+        .gen = generator,
+    };
+
     try cleanUpBuild();
 
-    // TODO: Generate build files (use function)
     switch (generator) {
         BuildGen.Zig => {},
         BuildGen.CMake => {
-            try cmake.cmake(cwd, allocator, _build.value);
+            try cmake.cmake(cwd, allocator, newBuild);
             log(Log.Inf, "Calling cmake...");
             switch(builder){
                 BuildBuilder.Ninja => {
@@ -590,8 +595,16 @@ fn build(args: [][:0]const u8, allocator: mem.Allocator) !void {
         },
     }
 
-    // TODO: Update build.json
-    // TODO: Run build process
+    log(Log.Inf, "Updating trsp.conf/build.json");
+
+    var file = try cwd.openFile("trsp.conf/build.json", .{ .mode = fs.File.OpenMode.write_only });
+    defer file.close();
+
+    var writer = file.writer();
+    try json.stringify(newBuild, .{}, writer);
+    _ = try writer.write("\n"); // Wreid error with additional } at the end of file
+
+    log(Log.Inf, "Succesfully builded.");
 }
 
 fn release(args: [][:0]const u8, allocator: mem.Allocator) !void {
