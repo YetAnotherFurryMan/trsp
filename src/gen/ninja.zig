@@ -15,7 +15,6 @@ const buildJSON = @import("../json/build.json.zig");
 const Build = buildJSON.Build;
 
 // TODO: Needs:
-// Project version
 // C std
 // C++ std
 // Other languages like ZIG or Fortran
@@ -136,7 +135,7 @@ pub fn ninja(cwd: fs.Dir, allocator: mem.Allocator, build: Build) !void {
     _ = try buildninja.write("  command = ld --shared $ldflags -o $out $in\n");
     _ = try buildninja.write("  description = Building dynamic library $out\n\n");
     _ = try buildninja.write("rule exe\n");
-    _ = try buildninja.write("  command = c++ -o $out $in $ldflags $libs\n");
+    _ = try buildninja.write("  command = c++ -o $out $in $libs\n");
     _ = try buildninja.write("  description = Building executable $out\n\n");
     
     for (modules.value) |module| {

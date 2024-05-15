@@ -644,7 +644,7 @@ fn release(args: [][:0]const u8, allocator: mem.Allocator) !void {
 
     try cmake.cmake(cwd, allocator, _build.value);
     try ninja.ninja(cwd, allocator, _build.value);
-    // TODO: Generate build files (use function)
+    try make.make(cwd, allocator, _build.value);
 }
 
 fn set(args: [][:0]const u8, allocator: mem.Allocator) !void {
