@@ -104,25 +104,25 @@ pub fn main() !void {
     }
 
     const program = args[0];
-    const task = args[1];
+    const entry = args[1];
 
     logf(Log.Inf, "Program: {s}", .{program});
 
-    const taskArgs = args[2..];
-    if (mem.eql(u8, task, "init")) {
-        return init(taskArgs, allocator);
-    } else if (mem.eql(u8, task, "module")) {
-        return module(taskArgs, allocator);
-    } else if (mem.eql(u8, task, "template")){
-        return template(taskArgs, allocator);
-    } else if (mem.eql(u8, task, "build")) {
-        return build(taskArgs, allocator);
-    } else if (mem.eql(u8, task, "release")) {
-        return release(taskArgs, allocator);
-    } else if (mem.eql(u8, task, "config")) {
-        return config(taskArgs, allocator);
+    const entryArgs = args[2..];
+    if (mem.eql(u8, entry, "init")) {
+        return init(entryArgs, allocator);
+    } else if (mem.eql(u8, entry, "module")) {
+        return module(entryArgs, allocator);
+    } else if (mem.eql(u8, entry, "template")){
+        return template(entryArgs, allocator);
+    } else if (mem.eql(u8, entry, "build")) {
+        return build(entryArgs, allocator);
+    } else if (mem.eql(u8, entry, "release")) {
+        return release(entryArgs, allocator);
+    } else if (mem.eql(u8, entry, "config")) {
+        return config(entryArgs, allocator);
     } else {
-        logf(Log.Err, "Unknown task: {s}", .{task});
+        logf(Log.Err, "Unknown entry: {s}", .{entry});
         return Err.BadTask;
     }
 }
@@ -446,7 +446,7 @@ fn template(args: [][:0]const u8, allocator: mem.Allocator) !void {
     _ = args;
     _ = allocator;
 
-    log(War, "Not implemented yet.");
+    log(Log.War, "Not implemented yet.");
 }
 
 fn cleanUpBuild() !void {
