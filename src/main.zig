@@ -113,12 +113,14 @@ pub fn main() !void {
         return init(taskArgs, allocator);
     } else if (mem.eql(u8, task, "module")) {
         return module(taskArgs, allocator);
+    } else if (mem.eql(u8, task, "template")){
+        return template(taskArgs, allocator);
     } else if (mem.eql(u8, task, "build")) {
         return build(taskArgs, allocator);
     } else if (mem.eql(u8, task, "release")) {
         return release(taskArgs, allocator);
-    } else if (mem.eql(u8, task, "set")) {
-        return set(taskArgs, allocator);
+    } else if (mem.eql(u8, task, "config")) {
+        return config(taskArgs, allocator);
     } else {
         logf(Log.Err, "Unknown task: {s}", .{task});
         return Err.BadTask;
@@ -212,7 +214,7 @@ fn init(args: [][:0]const u8, allocator: mem.Allocator) !void {
         name = "root";
         log(Log.War, "Using default project name: \"root\"!");
         log(Log.Inf, "To change project name use:");
-        log(Log.Inf, "    ./trsp set --project-name=$NAME");
+        log(Log.Inf, "    ./trsp config --project-name=$NAME");
     }
 
     const myBuildJSON_size = mem.replacementSize(u8, defaultBuildJSON, "${name}", name);
@@ -440,6 +442,13 @@ fn module(argsx: [][:0]const u8, allocator: mem.Allocator) !void {
     logf(Log.Inf, "Succesfully generated module \"{s}\"!", .{name.?});
 }
 
+fn template(args: [][:0]const u8, allocator: mem.Allocator) !void {
+    _ = args;
+    _ = allocator;
+
+    log(War, "Not implemented yet.");
+}
+
 fn cleanUpBuild() !void {
     const cwd = fs.cwd();
 
@@ -647,7 +656,7 @@ fn release(args: [][:0]const u8, allocator: mem.Allocator) !void {
     try make.make(cwd, allocator, _build.value);
 }
 
-fn set(args: [][:0]const u8, allocator: mem.Allocator) !void {
+fn config(args: [][:0]const u8, allocator: mem.Allocator) !void {
     _ = args;
     _ = allocator;
     log(Log.War, "Not implemented yet.");
