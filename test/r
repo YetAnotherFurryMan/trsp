@@ -48,21 +48,21 @@ echo Build default {zig, ninja}
 ./trsp build
 good $?
 
-# ./build/a
-# good $?
+./build/a
+good $?
 
-# ./build/b
-# good $?
+./build/b
+good $?
 
 echo Build reconfigure {zig, make}
 ./trsp build --builder=make
 good $?
 
-# ./build/a
-# good $?
+./build/a
+good $?
 
-# ./build/b
-# good $?
+./build/b
+good $?
 
 echo Build reconfigure {cmake, make}
 ./trsp build --generator=cmake
