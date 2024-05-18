@@ -1,7 +1,7 @@
 # Version 1.0
  - [x] Git support
  - [x] Register template
- - [ ] C++ support
+ - [x] C++ support
  - [ ] Zig support
 
 ## Version 1.1
