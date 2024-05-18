@@ -1,12 +1,12 @@
 # Version 1.0
  - [x] Git support
- - [ ] C++ support
- - [ ] Zig support
  - [ ] Register module
  - [ ] Register template
  - [ ] Create project
  - [ ] Register project
  - [ ] help entry
+ - [ ] C++ support
+ - [ ] Zig support
 
 # Version 2.0
  - [ ] Radicle support

@@ -13,6 +13,14 @@ pub inline fn load(cwd: fs.Dir, allocator: mem.Allocator) !json.Parsed([]Templat
     return loadJSON([]Template, cwd, allocator, "trsp.conf/templates.json");
 }
 
+pub inline fn loadCustom(cwd: fs.Dir, path: []const u8, allocator: mem.Allocator) !json.Parsed(Template) {
+    return loadJSON(Template, cwd, allocator, path);
+}
+
+pub inline fn loadCustomList(cwd: fs.Dir, path: []const u8, allocator: mem.Allocator) !json.Parsed([]Template) {
+    return loadJSON([]Template, cwd, allocator, path);
+}
+
 pub fn write(dir: fs.Dir, allocator: mem.Allocator, file: TemplateFile, module_name: []const u8) !void {
     // Name
     const name_size = mem.replacementSize(u8, file.name, "${module}", module_name);
