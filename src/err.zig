@@ -16,4 +16,5 @@ pub const Err = error{
     BadBuilder,
     Unreachable,
     ChildError,
+    CannotPerform,
 };

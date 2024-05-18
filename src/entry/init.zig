@@ -73,6 +73,10 @@ pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
     try conf.writeFile("templates.json", defaultTemplatesJSON);
 
     logf(Log.Inf, "Succesfully generated project \"{s}\"!", .{name});
+
+    log(Log.War, "TIPS:");
+    log(Log.Inf, "To initialize git use:");
+    log(Log.Inf, "    ./trsp config --git");
 }
 
 

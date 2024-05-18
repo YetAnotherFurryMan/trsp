@@ -1,5 +1,5 @@
 # Version 1.0
- - [ ] Git support
+ - [x] Git support
  - [ ] C++ support
  - [ ] Zig support
  - [ ] Register module

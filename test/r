@@ -88,6 +88,14 @@ echo Release
 ./trsp release
 good $?
 
+echo Config git
+./trsp config --git
+good $?
+
+echo Git add
+git add .
+good $?
+
 echo Leave foo
 cd ..
 
