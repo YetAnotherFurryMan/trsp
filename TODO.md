@@ -11,6 +11,7 @@
 # Version 2.0
  - [ ] Radicle support
  - [ ] Tests' support
+ - [ ] Bash support (as build system)
  - [ ] Rust support
  - [ ] Fortran support
  - [ ] D support
@@ -18,8 +19,9 @@
 
 # Version 3.0
  - [ ] Scripting languages support
- - [ ] Custom languages
  - [ ] Docs support (Markdown 5)
+ - [ ] Zig support (as build system)
+ - [ ] Custom languages
  - [ ] Lua support
  - [ ] Ada support
  - [ ] Fasm support
@@ -28,6 +30,7 @@
 # Version 4.0
  - [ ] Github tooks support
  - [ ] Creating template from project tree
+ - [ ] Custom build systems
  - [ ] Python support
  - [ ] Raku (Pascal) support
 
@@ -39,3 +42,5 @@
  - [x] Make support
  - [x] Ninja support
  - [x] renaming project (config entry)
+ - [x] build entry
+ - [x] release entry
