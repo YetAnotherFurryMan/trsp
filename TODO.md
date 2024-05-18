@@ -1,7 +1,7 @@
 # Version 1.0
  - [x] Git support
  - [ ] Register module
- - [ ] Register template
+ - [x] Register template
  - [ ] Create project
  - [ ] Register project
  - [ ] help entry

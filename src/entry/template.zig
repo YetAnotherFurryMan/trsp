@@ -65,11 +65,12 @@ pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
 
             try templates.appendSlice(t.value);
         }
-    }
 
-    // while(templates.popOrNull()) |tmpl| {
-    //     logf(Log.Deb, "T: {}", .{tmpl});
-    // }
+        const t = try templatesJSON.loadCustom(cwd, src.path, allocator);
+        defer t.deinit();
+
+        try templates.append(t.value);
+    }
 
     var file = try cwd.openFile("trsp.conf/templates.json", .{ .mode = fs.File.OpenMode.write_only });
     defer file.close();
