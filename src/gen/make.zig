@@ -28,13 +28,13 @@ fn addModule(module: modulesJSON.Module, makefile: fs.File, cwd: fs.Dir, allocat
 
     _ = try makefile.write("$(BUILD)/");
 
-    if(module.mtype == ModType.StaticLibrary){
+    if (module.mtype == ModType.StaticLibrary) {
         _ = try makefile.write("lib");
     }
 
     _ = try makefile.write(module.name);
 
-    switch(module.mtype){
+    switch (module.mtype) {
         ModType.StaticLibrary => {
             _ = try makefile.write(".a: ");
         },
@@ -43,14 +43,14 @@ fn addModule(module: modulesJSON.Module, makefile: fs.File, cwd: fs.Dir, allocat
         },
         else => {
             _ = try makefile.write(": ");
-        }
+        },
     }
 
     // WARNING: each record must be freed manualy!!!
     var filelist = try listFiles(mdir, allocator);
     defer filelist.deinit();
 
-    while(filelist.popOrNull()) |e|{
+    while (filelist.popOrNull()) |e| {
         _ = try makefile.write("$(BUILD)/");
         _ = try makefile.write(module.name);
         _ = try makefile.write(".dir");
@@ -59,9 +59,8 @@ fn addModule(module: modulesJSON.Module, makefile: fs.File, cwd: fs.Dir, allocat
         allocator.free(e);
     }
 
-    switch(module.mtype){
-        ModType.Default,
-        ModType.Executable => {
+    switch (module.mtype) {
+        ModType.Default, ModType.Executable => {
             _ = try makefile.write("\n\t$(CXX) -o $@ $^ $(LDFLAGS) -std=c++20\n\n");
         },
         ModType.StaticLibrary => {
@@ -78,7 +77,7 @@ fn addModule(module: modulesJSON.Module, makefile: fs.File, cwd: fs.Dir, allocat
     _ = try makefile.write(module.name);
     _ = try makefile.write("/%.c\n");
     _ = try makefile.write("\t$(CC) -c -o $@ $^ $(CFLAGS) $(cflags)");
-    if(module.mtype == ModType.SharedLibrary)
+    if (module.mtype == ModType.SharedLibrary)
         _ = try makefile.write(" -fPIC");
     _ = try makefile.write("\n\n");
 
@@ -88,8 +87,21 @@ fn addModule(module: modulesJSON.Module, makefile: fs.File, cwd: fs.Dir, allocat
     _ = try makefile.write(module.name);
     _ = try makefile.write("/%.cpp\n");
     _ = try makefile.write("\t$(CXX) -c -o $@ $^ $(CXXFLAGS) $(cxxflags)");
-    if(module.mtype == ModType.SharedLibrary)
+    if (module.mtype == ModType.SharedLibrary)
         _ = try makefile.write(" -fPIC");
+    _ = try makefile.write("\n\n");
+
+    _ = try makefile.write("$(BUILD)/");
+    _ = try makefile.write(module.name);
+    _ = try makefile.write(".dir/%.zig.o: ");
+    _ = try makefile.write(module.name);
+    _ = try makefile.write("/%.zig\n");
+    _ = try makefile.write("\t$(ZIG) build-obj -femit-bin=\"$@\" $^ --name $(notdir $^) -O ReleaseSmall");
+    if (module.mtype == ModType.SharedLibrary) {
+        _ = try makefile.write(" -fPIC");
+    } else {
+        _ = try makefile.write(" -fPIE");
+    }
     _ = try makefile.write("\n\n");
 }
 
@@ -105,7 +117,8 @@ pub fn make(cwd: fs.Dir, allocator: mem.Allocator, build: Build) !void {
     log(Log.Inf, "Generating Makefile");
     _ = try makefile.write("BUILD ?= build\n\n");
     _ = try makefile.write("RM ?= rm -f\n");
-    _ = try makefile.write("MKDIR ?= mkdir\n\n");
+    _ = try makefile.write("MKDIR ?= mkdir\n");
+    _ = try makefile.write("ZIG ?= zig\n\n");
     _ = try makefile.write("cflags := -Wall -Wextra -Wpedantic -std=c17\n");
     _ = try makefile.write("cxxflags := -Wall -Wextra -Wpedantic -std=c++20\n");
     _ = try makefile.write("ldflags := -L./$(BUILD)\n\n");
@@ -122,7 +135,7 @@ pub fn make(cwd: fs.Dir, allocator: mem.Allocator, build: Build) !void {
         var dirs = try listDirs(mdir, allocator);
         defer dirs.deinit();
 
-        while(dirs.popOrNull()) |dir| {
+        while (dirs.popOrNull()) |dir| {
             _ = try makefile.write("$(BUILD)/");
             _ = try makefile.write(module.name);
             _ = try makefile.write(".dir");
@@ -139,11 +152,11 @@ pub fn make(cwd: fs.Dir, allocator: mem.Allocator, build: Build) !void {
     _ = try makefile.write("all: $(dirs) ");
     for (modules.value) |module| {
         _ = try makefile.write("$(BUILD)/");
-        if(module.mtype == ModType.StaticLibrary){
+        if (module.mtype == ModType.StaticLibrary) {
             _ = try makefile.write("lib");
         }
         _ = try makefile.write(module.name);
-        switch(module.mtype){
+        switch (module.mtype) {
             ModType.StaticLibrary => {
                 _ = try makefile.write(".a ");
             },
@@ -152,7 +165,7 @@ pub fn make(cwd: fs.Dir, allocator: mem.Allocator, build: Build) !void {
             },
             else => {
                 _ = try makefile.write(" ");
-            }
+            },
         }
     }
     _ = try makefile.write("\n\n");
