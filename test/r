@@ -112,8 +112,8 @@ echo Create module cpp3
 ./trsp module cpp3 -tc -d
 good $?
 
-echo Build default {zig, ninja}
-./trsp build
+echo Build reconfigure {zig, ninja}
+./trsp build -gzig -bninja
 good $?
 
 ./build/c1

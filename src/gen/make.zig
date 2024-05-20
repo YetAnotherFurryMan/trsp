@@ -81,6 +81,16 @@ fn addModule(module: modulesJSON.Module, makefile: fs.File, cwd: fs.Dir, allocat
     if(module.mtype == ModType.SharedLibrary)
         _ = try makefile.write(" -fPIC");
     _ = try makefile.write("\n\n");
+
+    _ = try makefile.write("$(BUILD)/");
+    _ = try makefile.write(module.name);
+    _ = try makefile.write(".dir/%.cpp.o: ");
+    _ = try makefile.write(module.name);
+    _ = try makefile.write("/%.cpp\n");
+    _ = try makefile.write("\t$(CXX) -c -o $@ $^ $(CXXFLAGS) $(cxxflags)");
+    if(module.mtype == ModType.SharedLibrary)
+        _ = try makefile.write(" -fPIC");
+    _ = try makefile.write("\n\n");
 }
 
 pub fn make(cwd: fs.Dir, allocator: mem.Allocator, build: Build) !void {

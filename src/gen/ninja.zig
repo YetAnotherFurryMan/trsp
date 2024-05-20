@@ -34,7 +34,7 @@ fn addModule(module: modulesJSON.Module, buildninja: fs.File, cwd: fs.Dir, alloc
 
     while (filelist.popOrNull()) |e| {
         const ext = fs.path.extension(e);
-        if(mem.eql(u8, ext, ".c")){
+        if(mem.eql(u8, ext, ".c") or mem.eql(u8, ext, ".cpp")){
             const bin = try mem.join(allocator, "", &[_][]const u8{
                 "$builddir/",
                 module.name,
@@ -45,9 +45,18 @@ fn addModule(module: modulesJSON.Module, buildninja: fs.File, cwd: fs.Dir, alloc
 
             _ = try buildninja.write("build ");
             _ = try buildninja.write(bin);
-            _ = try buildninja.write(": cc ");
+            
+            if(mem.eql(u8, ext, ".c")){
+                _ = try buildninja.write(": cc ");
+            } else{
+                _ = try buildninja.write(": cpp ");
+            }
+
             _ = try buildninja.write(e);
-            _ = try buildninja.write("\n  includes = -I.\n\n");
+            _ = try buildninja.write("\n  includes = -I.\n");
+            if(module.mtype == ModType.StaticLibrary or module.mtype == ModType.SharedLibrary)
+                _ = try buildninja.write("  flags = -fPIC\n");
+            _ = try buildninja.write("\n");
 
             try bins.append(bin);
         } else{
