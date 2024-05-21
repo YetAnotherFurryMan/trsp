@@ -14,7 +14,7 @@
 
 # Version 2.0
  - [ ] Radicle support
- - [ ] Tests' support
+ - [ ] Custom languages
  - [ ] Bash support (as build system)
  - [ ] Rust support
  - [ ] Fortran support
@@ -23,9 +23,9 @@
 
 # Version 3.0
  - [ ] Scripting languages support
+ - [ ] Tests' support
  - [ ] Docs support (Markdown 5)
  - [ ] Zig support (as build system)
- - [ ] Custom languages
  - [ ] Lua support
  - [ ] Ada support
  - [ ] Fasm support
