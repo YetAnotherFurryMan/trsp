@@ -12,7 +12,9 @@ const logf = l.logf;
 const defaultBuildJSON = "{\"name\":\"${name}\",\"gen\":\"Zig\",\"builder\":\"Ninja\"}";
 const defaultModulesJSON = "[]";
 const defaultProjectsJSON = "[]";
-const defaultTemplatesJSON = "[{\"name\":\"c\",\"exe\":{\"head\":[],\"src\":[{\"name\":\"main.c\",\"cnt\":\"#include <stdio.h>\\n\\nint main(int argc, const char** argv){\\n    printf(\\\"Hello World!\\\\n\\\");\\n    return 0;\\n}\\n\"}]},\"shared\":{\"head\":[{\"name\":\"${module}.h\",\"cnt\":\"#ifndef _${module}_H_\\n#define _${module}_H_\\n\\nvoid hello();\\n\\n#endif\"}],\"src\":[{\"name\":\"${module}.c\",\"cnt\":\"#include <stdio.h>\\n\\nvoid hello(){\\n    printf(\\\"Hello World!\\\\n\\\");\\n}\\n\"}]},\"static\":{\"head\":[{\"name\":\"${module}.h\",\"cnt\":\"#ifndef _${module}_H_\\n#define _${module}_H_\\n\\nvoid hello();\\n\\n#endif\"}],\"src\":[{\"name\":\"${module}.c\",\"cnt\":\"#include <stdio.h>\\n\\nvoid hello(){\\n    printf(\\\"Hello World!\\\\n\\\");\\n}\\n\"}]}}]";
+//const defaultTemplatesJSON = "[{\"name\":\"c\",\"exe\":{\"head\":[],\"src\":[{\"name\":\"main.c\",\"cnt\":\"#include <stdio.h>\\n\\nint main(int argc, const char** argv){\\n    printf(\\\"Hello World!\\\\n\\\");\\n    return 0;\\n}\\n\"}]},\"shared\":{\"head\":[{\"name\":\"${module}.h\",\"cnt\":\"#ifndef _${module}_H_\\n#define _${module}_H_\\n\\nvoid hello();\\n\\n#endif\"}],\"src\":[{\"name\":\"${module}.c\",\"cnt\":\"#include <stdio.h>\\n\\nvoid hello(){\\n    printf(\\\"Hello World!\\\\n\\\");\\n}\\n\"}]},\"static\":{\"head\":[{\"name\":\"${module}.h\",\"cnt\":\"#ifndef _${module}_H_\\n#define _${module}_H_\\n\\nvoid hello();\\n\\n#endif\"}],\"src\":[{\"name\":\"${module}.c\",\"cnt\":\"#include <stdio.h>\\n\\nvoid hello(){\\n    printf(\\\"Hello World!\\\\n\\\");\\n}\\n\"}]}}]";
+const defaultTemplatesJSON = "[\"c\"]";
+const defaultCTemplate = "{\"exe\":{\"head\":[],\"src\":[{\"name\":\"main.c\",\"cnt\":\"#include <stdio.h>\\n\\nint main(int argc, const char** argv){\\n    printf(\\\"Hello World!\\\\n\\\");\\n    return 0;\\n}\\n\"}]},\"shared\":{\"head\":[{\"name\":\"${module}.h\",\"cnt\":\"#ifndef _${module}_H_\\n#define _${module}_H_\\n\\nvoid hello();\\n\\n#endif\"}],\"src\":[{\"name\":\"${module}.c\",\"cnt\":\"#include <stdio.h>\\n\\nvoid hello(){\\n    printf(\\\"Hello World!\\\\n\\\");\\n}\\n\"}]},\"static\":{\"head\":[{\"name\":\"${module}.h\",\"cnt\":\"#ifndef _${module}_H_\\n#define _${module}_H_\\n\\nvoid hello();\\n\\n#endif\"}],\"src\":[{\"name\":\"${module}.c\",\"cnt\":\"#include <stdio.h>\\n\\nvoid hello(){\\n    printf(\\\"Hello World!\\\\n\\\");\\n}\\n\"}]}}";
 
 pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
     var cwd = fs.cwd();
@@ -55,7 +57,7 @@ pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
     var conf = try cwd.makeOpenPath("trsp.conf", .{});
     defer conf.close();
 
-    if(mem.eql(u8, name, ".")){
+    if (mem.eql(u8, name, ".")) {
         name = "root";
         log(Log.War, "Using default project name: \"root\"!");
         log(Log.Inf, "To change project name use:");
@@ -72,11 +74,14 @@ pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
     try conf.writeFile("projects.json", defaultProjectsJSON);
     try conf.writeFile("templates.json", defaultTemplatesJSON);
 
+    var tmpls = try conf.makeOpenPath("templates", .{});
+    defer tmpls.close();
+
+    try tmpls.writeFile("c.json", defaultCTemplate);
+
     logf(Log.Inf, "Succesfully generated project \"{s}\"!", .{name});
 
     log(Log.War, "TIPS:");
     log(Log.Inf, "To initialize git use:");
     log(Log.Inf, "    ./trsp config --git");
 }
-
-

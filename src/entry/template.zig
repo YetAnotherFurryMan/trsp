@@ -13,13 +13,12 @@ const logf = l.logf;
 const templatesJSON = @import("../json/templates.json.zig");
 const TemplateFile = templatesJSON.TemplateFile;
 const Template = templatesJSON.Template;
+const NamedTemplate = struct { name: []const u8, tmpl: Template };
 
 const cla = @import("cla.zig");
 const ensureProject = @import("ensureProject.zig").ensureProject;
 
-const Src = struct{ path: []const u8, list: bool };
-
-const defaultCXXTemplate= "{\"name\":\"c++\",\"exe\":{\"head\":[],\"src\":[{\"name\":\"main.cpp\",\"cnt\":\"#include <iostream>\\n\\nint main(int argc, const char** argv){\\n    std::cout << \\\"Hello World!\\\" << std::endl;\\n    return 0;\\n}\\n\"}]},\"shared\":{\"head\":[{\"name\":\"${module}.hpp\",\"cnt\":\"#pragma once\\n\\nnamespace ${module}{\\n    void hello();\\n}\"}],\"src\":[{\"name\":\"${module}.cpp\",\"cnt\":\"#include <iostream>\\n\\nnamespace ${module}{\\n    void hello(){\\n        std::cout << \\\"Hello World!\\\" << std::endl;\\n    }\\n}\"}]},\"static\":{\"head\":[{\"name\":\"${module}.hpp\",\"cnt\":\"#pragma once\\n\\nnamespace ${module}{\\n    void hello();\\n}\"}],\"src\":[{\"name\":\"${module}.cpp\",\"cnt\":\"#include <iostream>\\n\\nnamespace ${module}{\\n    void hello(){\\n        std::cout << \\\"Hello World!\\\" << std::endl;\\n    }\\n}\"}]}}";
+const defaultCXXTemplate = "{\"exe\":{\"head\":[],\"src\":[{\"name\":\"main.cpp\",\"cnt\":\"#include <iostream>\\n\\nint main(int argc, const char** argv){\\n    std::cout << \\\"Hello World!\\\" << std::endl;\\n    return 0;\\n}\\n\"}]},\"shared\":{\"head\":[{\"name\":\"${module}.hpp\",\"cnt\":\"#pragma once\\n\\nnamespace ${module}{\\n    void hello();\\n}\"}],\"src\":[{\"name\":\"${module}.cpp\",\"cnt\":\"#include <iostream>\\n\\nnamespace ${module}{\\n    void hello(){\\n        std::cout << \\\"Hello World!\\\" << std::endl;\\n    }\\n}\"}]},\"static\":{\"head\":[{\"name\":\"${module}.hpp\",\"cnt\":\"#pragma once\\n\\nnamespace ${module}{\\n    void hello();\\n}\"}],\"src\":[{\"name\":\"${module}.cpp\",\"cnt\":\"#include <iostream>\\n\\nnamespace ${module}{\\n    void hello(){\\n        std::cout << \\\"Hello World!\\\" << std::endl;\\n    }\\n}\"}]}}";
 
 pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
     try ensureProject();
@@ -27,87 +26,74 @@ pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
     const cwd = fs.cwd();
 
     const descriptions = [_]cla.ArgDescription{
-        .{ .short = 'l', .long = "list" },
         .{ .short = 0, .long = "c++" },
     };
 
     var argList = try cla.parse(args, &descriptions, allocator);
     defer argList.deinit();
 
-    var srcs = std.ArrayList(Src).init(allocator);
-    defer srcs.deinit();
-
-    var templates = std.ArrayList(Template).init(allocator);
+    var templates = std.ArrayList(NamedTemplate).init(allocator);
     defer templates.deinit();
 
-    var tmpls = try templatesJSON.load(cwd, allocator);
-    defer tmpls.deinit();
-
-    try templates.appendSlice(tmpls.value);
+    var names = std.ArrayList([]const u8).init(allocator);
+    defer names.deinit();
 
     var parse_to_deinit = std.ArrayList(json.Parsed(Template)).init(allocator);
     defer {
-        while(parse_to_deinit.popOrNull()) |e| {
+        while (parse_to_deinit.popOrNull()) |e| {
             e.deinit();
         }
         parse_to_deinit.deinit();
     }
 
+    var tmpls = try templatesJSON.list(cwd, allocator);
+    defer tmpls.deinit();
+
+    try names.appendSlice(tmpls.value);
+
     while (argList.popOrNull()) |arg| {
         logf(Log.Deb, "Arg {}: {?s}", arg);
 
         if (arg.id < 0) {
-            try srcs.append(.{ .path = arg.value.?, .list = false });
-        } else if(mem.eql(u8, descriptions[@bitCast(arg.id)].long, "c++")){
-            const t = try json.parseFromSlice(Template, allocator, defaultCXXTemplate, .{});
+            // TODO: !! Validate
+            logf(Log.Deb, "Loading src: {s}", .{arg.value.?});
+            const t = try templatesJSON.loadPath(cwd, arg.value.?, allocator);
             try parse_to_deinit.append(t);
 
-            try templates.append(t.value);
-        } else if(descriptions[@bitCast(arg.id)].short == 'l'){
-            if(arg.value == null){
-                log(Log.Err, "Excepted value.");
-                log(Log.Note, "Try using \'=\' or delete space before the flag argument.");
-                return Err.NoValue;
-            }
-
-            try srcs.append(.{ .path = arg.value.?, .list = true });
-        } else{
+            const tt = NamedTemplate{ .name = fs.path.basename(arg.value.?), .tmpl = t.value };
+            try templates.append(tt);
+            try names.append(tt.name);
+        } else if (mem.eql(u8, descriptions[@bitCast(arg.id)].long, "c++")) {
+            const t = try json.parseFromSlice(Template, allocator, defaultCXXTemplate, .{});
+            try parse_to_deinit.append(t);
+            try templates.append(.{ .name = "c++", .tmpl = t.value });
+            try names.append("c++");
+        } else {
             logf(Log.Err, "Unhandled argument \"{}:{?s}\"", arg);
             return Err.BadArg;
         }
     }
 
-    var parse_to_deinit_arr = std.ArrayList(json.Parsed([]Template)).init(allocator);
-    defer {
-        while(parse_to_deinit_arr.popOrNull()) |e| {
-            e.deinit();
-        }
-        parse_to_deinit_arr.deinit();
-    }
-
-    while(srcs.popOrNull()) |src| {
-        logf(Log.Deb, "Loading src: {}", .{src});
-        
-        if(src.list){
-            const t = try templatesJSON.loadCustomList(cwd, src.path, allocator);
-            try parse_to_deinit_arr.append(t);
-
-            try templates.appendSlice(t.value);
-        } else{
-            const t = try templatesJSON.loadCustom(cwd, src.path, allocator);
-            try parse_to_deinit.append(t);
-
-            try templates.append(t.value);
-        }
-    }
+    log(Log.Inf, "Updating templates.json...");
 
     var file = try cwd.openFile("trsp.conf/templates.json", .{ .mode = fs.File.OpenMode.write_only });
     defer file.close();
 
     var writer = file.writer();
-    try json.stringify(templates.items, .{}, writer);
+    try json.stringify(names.items, .{}, writer);
     _ = try writer.write("\n"); // Wreid error with additional } at the end of file
-    
+
+    while (templates.popOrNull()) |t| {
+        const path = try mem.concat(allocator, u8, &[_][]const u8{ "trsp.conf/templates/", t.name, ".json" });
+        defer allocator.free(path);
+
+        var f = try cwd.createFile(path, .{});
+        defer f.close();
+
+        var w = f.writer();
+        try json.stringify(t.tmpl, .{}, w);
+        _ = try w.write("\n\n");
+    }
+
     log(Log.Inf, "Succesfully added templates.");
 }
-

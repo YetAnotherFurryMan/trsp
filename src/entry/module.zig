@@ -19,9 +19,10 @@ const projectsJSON = @import("../json/projects.json.zig");
 const Project = projectsJSON.Project;
 const loadProjects = projectsJSON.load;
 
-const templateJSON = @import("../json/templates.json.zig");
-const Template = templateJSON.Template;
-const loadTemplates = templateJSON.load;
+const templatesJSON = @import("../json/templates.json.zig");
+const Template = templatesJSON.Template;
+const loadTemplate = templatesJSON.load;
+const listTemplates = templatesJSON.list;
 
 const str = @import("../common/str.zig");
 
@@ -140,8 +141,8 @@ pub fn entry(argsx: [][:0]const u8, allocator: mem.Allocator) !void {
     var projects = try loadProjects(cwd, allocator);
     defer projects.deinit();
 
-    var templates = try loadTemplates(cwd, allocator);
-    defer templates.deinit();
+    var template_names = try listTemplates(cwd, allocator);
+    defer template_names.deinit();
 
     log(Log.Inf, "Validating data...");
 
@@ -158,8 +159,11 @@ pub fn entry(argsx: [][:0]const u8, allocator: mem.Allocator) !void {
         modType = ModType.Executable;
     }
 
-    if (mem.eql(u8, name.?, "build")) {
-        log(Log.Err, "Bad module name: \"build\" is a reserved name.");
+    if (mem.eql(u8, name.?, "build") or
+        mem.eql(u8, name.?, "trsp") or
+        mem.eql(u8, name.?, "LICENCE"))
+    {
+        logf(Log.Err, "Bad module name: \"{s}\" is a reserved name.", .{name.?});
         return Err.BadName;
     }
 
@@ -179,13 +183,17 @@ pub fn entry(argsx: [][:0]const u8, allocator: mem.Allocator) !void {
         }
     }
 
-    var tmpl: ?Template = null;
+    var tmpl: ?json.Parsed(Template) = null;
+    defer {
+        if (tmpl != null)
+            tmpl.?.deinit();
+    }
 
-    for (templates.value) |t| {
-        logf(Log.Deb, "Template \"{s}\"...", .{t.name});
-        if (mem.eql(u8, t.name, template.?)) {
-            logf(Log.Inf, "Found template \"{s}\".", .{t.name});
-            tmpl = t;
+    for (template_names.value) |t| {
+        logf(Log.Deb, "Template \"{s}\"...", .{t});
+        if (mem.eql(u8, t, template.?)) {
+            logf(Log.Inf, "Found template \"{s}\".", .{t});
+            tmpl = try loadTemplate(cwd, allocator, t);
             break;
         }
     }
@@ -201,9 +209,9 @@ pub fn entry(argsx: [][:0]const u8, allocator: mem.Allocator) !void {
     defer moduleDir.close();
 
     const tmplMode = switch (modType) {
-        ModType.Executable => tmpl.?.exe,
-        ModType.SharedLibrary => tmpl.?.shared,
-        ModType.StaticLibrary => tmpl.?.static,
+        ModType.Executable => tmpl.?.value.exe,
+        ModType.SharedLibrary => tmpl.?.value.shared,
+        ModType.StaticLibrary => tmpl.?.value.static,
         else => {
             log(Log.Err, "Unhandled modType...");
             return Err.Unreachable;
@@ -211,11 +219,11 @@ pub fn entry(argsx: [][:0]const u8, allocator: mem.Allocator) !void {
     };
 
     for (tmplMode.src) |file| {
-        try templateJSON.write(moduleDir, allocator, file, name.?);
+        try templatesJSON.write(moduleDir, allocator, file, name.?);
     }
 
     for (tmplMode.head) |file| {
-        try templateJSON.write(cwd, allocator, file, name.?);
+        try templatesJSON.write(cwd, allocator, file, name.?);
     }
 
     logf(Log.Inf, "Registering module \"{s}\"...", .{name.?});
