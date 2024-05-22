@@ -19,6 +19,7 @@ const cla = @import("cla.zig");
 const ensureProject = @import("ensureProject.zig").ensureProject;
 
 const defaultCXXTemplate = "{\"mod\":\"CompileAll\",\"exe\":{\"head\":[],\"src\":[{\"name\":\"main.cpp\",\"cnt\":\"#include <iostream>\\n\\nint main(int argc, const char** argv){\\n    std::cout << \\\"Hello World!\\\" << std::endl;\\n    return 0;\\n}\\n\"}],\"main\":\"main.cpp\"},\"shared\":{\"head\":[{\"name\":\"${module}.hpp\",\"cnt\":\"#pragma once\\n\\nnamespace ${module}{\\n    void hello();\\n}\"}],\"src\":[{\"name\":\"${module}.cpp\",\"cnt\":\"#include <iostream>\\n\\nnamespace ${module}{\\n    void hello(){\\n        std::cout << \\\"Hello World!\\\" << std::endl;\\n    }\\n}\"}],\"main\":\"${module}.cpp\"},\"static\":{\"head\":[{\"name\":\"${module}.hpp\",\"cnt\":\"#pragma once\\n\\nnamespace ${module}{\\n    void hello();\\n}\"}],\"src\":[{\"name\":\"${module}.cpp\",\"cnt\":\"#include <iostream>\\n\\nnamespace ${module}{\\n    void hello(){\\n        std::cout << \\\"Hello World!\\\" << std::endl;\\n    }\\n}\"}],\"main\":\"${module}.cpp\"}}";
+const defaultZigTemplate = "{\"mod\":\"CompileAll\",\"exe\":{\"head\":[],\"src\":[{\"name\":\"main.zig\",\"cnt\":\"const std = @import(\\\"std\\\");\\n\\npub fn main() !void {\\n    std.debug.print(\\\"Hello World!\\\\n\\\", .{});\\n}\"}],\"main\":\"main.zig\"},\"shared\":{\"head\":[],\"src\":[{\"name\":\"${module}.zig\",\"cnt\":\"export fn hello() void {}\"}],\"main\":\"${module}.zig\"},\"static\":{\"head\":[],\"src\":[{\"name\":\"${module}.zig\",\"cnt\":\"export fn hello() void {}\"}],\"main\":\"${module}.zig\"}}";
 
 pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
     try ensureProject();
@@ -27,6 +28,7 @@ pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
 
     const descriptions = [_]cla.ArgDescription{
         .{ .short = 0, .long = "c++" },
+        .{ .short = 0, .long = "zig" },
     };
 
     var argList = try cla.parse(args, &descriptions, allocator);
@@ -68,6 +70,11 @@ pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
             try parse_to_deinit.append(t);
             try templates.append(.{ .name = "c++", .tmpl = t.value });
             try names.append("c++");
+        } else if (mem.eql(u8, descriptions[@bitCast(arg.id)].long, "zig")) {
+            const t = try json.parseFromSlice(Template, allocator, defaultZigTemplate, .{});
+            try parse_to_deinit.append(t);
+            try templates.append(.{ .name = "zig", .tmpl = t.value });
+            try names.append("zig");
         } else {
             logf(Log.Err, "Unhandled argument \"{}:{?s}\"", arg);
             return Err.BadArg;

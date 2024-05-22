@@ -25,6 +25,36 @@ fn addModule(module: modulesJSON.Module, buildninja: fs.File, cwd: fs.Dir, alloc
     var mdir = try cwd.openDir(module.name, .{ .iterate = true });
     defer mdir.close();
 
+    if (mem.eql(u8, module.template, "zig")) {
+        _ = try buildninja.write("build $builddir/");
+        switch (module.mtype) {
+            ModType.Default, ModType.Executable => {
+                _ = try buildninja.write(module.name);
+                _ = try buildninja.write(": zig-exe ");
+                _ = try buildninja.write(module.name);
+                _ = try buildninja.write("/main.zig\n");
+            },
+            ModType.StaticLibrary => {
+                _ = try buildninja.write("lib");
+                _ = try buildninja.write(module.name);
+                _ = try buildninja.write(".a: zig-lib ");
+                _ = try buildninja.write(module.name);
+                _ = try buildninja.write("/");
+                _ = try buildninja.write(module.name);
+                _ = try buildninja.write(".zig\n");
+            },
+            ModType.SharedLibrary => {
+                _ = try buildninja.write(module.name);
+                _ = try buildninja.write(".so: zig-dll ");
+                _ = try buildninja.write(module.name);
+                _ = try buildninja.write("/");
+                _ = try buildninja.write(module.name);
+                _ = try buildninja.write(".zig\n");
+            },
+        }
+        return;
+    }
+
     // WARNING: each record must be freed manualy!!!
     var filelist = try listFiles(mdir, allocator);
     defer filelist.deinit();
@@ -132,11 +162,20 @@ pub fn ninja(cwd: fs.Dir, allocator: mem.Allocator, build: Build) !void {
     _ = try buildninja.write("rule cpp\n");
     _ = try buildninja.write("  depfile = $out.d\n");
     _ = try buildninja.write("  deps = gcc\n");
-    _ = try buildninja.write("  command = c++ $includes $flags $cxxflags -c $in -MD -MT $out -MF $out.d -o $out\n");
+    _ = try buildninja.write("  command = c++ $includes $flags $cxxflags -c $in -MD -MT $out -MF $out.d -o $out -fno-use-cxa-atexit\n");
     _ = try buildninja.write("  description = Building C++ object $out\n\n");
     _ = try buildninja.write("rule zig-obj\n");
     _ = try buildninja.write("  command = zig build-obj $includes $flags $in -femit-bin=$out -O ReleaseSmall\n");
     _ = try buildninja.write("  description = Building Zig object $out\n\n");
+    _ = try buildninja.write("rule zig-exe\n");
+    _ = try buildninja.write("  command = zig build-exe $includes $flags $in -femit-bin=$out\n");
+    _ = try buildninja.write("  description = Building Zig executable $out\n\n");
+    _ = try buildninja.write("rule zig-lib\n");
+    _ = try buildninja.write("  command = zig build-lib $includes $flags $in -femit-bin=$out -static\n");
+    _ = try buildninja.write("  description = Building Zig static library $out\n\n");
+    _ = try buildninja.write("rule zig-dll\n");
+    _ = try buildninja.write("  command = zig build-lib $includes $flags $in -femit-bin=$out -dynamic\n");
+    _ = try buildninja.write("  description = Building Zig shared library $out\n\n");
     _ = try buildninja.write("rule lib\n");
     _ = try buildninja.write("  command = ar qc $out $in\n");
     _ = try buildninja.write("  description = Building static library $out\n\n");

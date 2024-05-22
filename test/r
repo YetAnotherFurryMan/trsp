@@ -105,11 +105,11 @@ echo Create module cpp1
 good $?
 
 echo Create module cpp2
-./trsp module cpp2 -tc -l
+./trsp module cpp2 -tc++ -l
 good $?
 
 echo Create module cpp3
-./trsp module cpp3 -tc -d
+./trsp module cpp3 -tc++ -d
 good $?
 
 echo Build reconfigure {zig, ninja}
@@ -162,6 +162,38 @@ good $?
 good $?
 
 ./build/cpp1
+good $?
+
+echo Register template zig
+./trsp template --zig
+good $?
+
+echo Create module zig1
+./trsp module zig1 --template=zig --exe
+good $?
+
+echo Create module zig2
+./trsp module zig2 -tzig -l
+good $?
+
+echo Create module zig3
+./trsp module zig3 -tzig -d
+good $?
+
+echo Build reconfigure {Zig, ninja}
+./trsp build -gzig
+good $?
+
+./build/c1
+good $?
+
+./build/c2
+good $?
+
+./build/cpp1
+good $?
+
+./build/zig1
 good $?
 
 echo Leave foo
