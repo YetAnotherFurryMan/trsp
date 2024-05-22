@@ -81,7 +81,7 @@ pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
 
     var writer = file.writer();
     try json.stringify(names.items, .{}, writer);
-    _ = try writer.write("\n"); // Wreid error with additional } at the end of file
+    _ = try writer.write("\n\n"); // Wreid error with additional } at the end of file
 
     while (templates.popOrNull()) |t| {
         const path = try mem.concat(allocator, u8, &[_][]const u8{ "trsp.conf/templates/", t.name, ".json" });

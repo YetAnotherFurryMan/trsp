@@ -34,41 +34,39 @@ fn addModule(module: modulesJSON.Module, buildninja: fs.File, cwd: fs.Dir, alloc
 
     while (filelist.popOrNull()) |e| {
         const ext = fs.path.extension(e);
-        if(mem.eql(u8, ext, ".c") or mem.eql(u8, ext, ".cpp")){
-            const bin = try mem.join(allocator, "", &[_][]const u8{
-                "$builddir/",
-                module.name,
-                ".dir",
-                e[module.name.len..],
-                ".o"
-            });
+        if (mem.eql(u8, ext, ".c") or mem.eql(u8, ext, ".cpp") or mem.eql(u8, ext, ".zig")) {
+            const bin = try mem.join(allocator, "", &[_][]const u8{ "$builddir/", module.name, ".dir", e[module.name.len..], ".o" });
 
             _ = try buildninja.write("build ");
             _ = try buildninja.write(bin);
-            
-            if(mem.eql(u8, ext, ".c")){
+
+            if (mem.eql(u8, ext, ".c")) {
                 _ = try buildninja.write(": cc ");
-            } else{
+            } else if (mem.eql(u8, ext, ".cpp")) {
                 _ = try buildninja.write(": cpp ");
+            } else {
+                _ = try buildninja.write(": zig-obj ");
             }
 
             _ = try buildninja.write(e);
             _ = try buildninja.write("\n  includes = -I.\n");
-            if(module.mtype == ModType.StaticLibrary or module.mtype == ModType.SharedLibrary)
+            if (module.mtype == ModType.StaticLibrary or module.mtype == ModType.SharedLibrary) {
                 _ = try buildninja.write("  flags = -fPIC\n");
+            } else {
+                _ = try buildninja.write("  flags = -fPIE\n");
+            }
             _ = try buildninja.write("\n");
 
             try bins.append(bin);
-        } else{
+        } else {
             logf(Log.War, "Skipping file {s} - unknown extension.", .{e});
         }
         allocator.free(e);
     }
 
     _ = try buildninja.write("build $builddir/");
-    switch(module.mtype){
-        ModType.Default,
-        ModType.Executable => {
+    switch (module.mtype) {
+        ModType.Default, ModType.Executable => {
             _ = try buildninja.write(module.name);
             _ = try buildninja.write(": exe ");
         },
@@ -80,10 +78,10 @@ fn addModule(module: modulesJSON.Module, buildninja: fs.File, cwd: fs.Dir, alloc
         ModType.SharedLibrary => {
             _ = try buildninja.write(module.name);
             _ = try buildninja.write(".so: dll ");
-        }
+        },
     }
 
-    while (bins.popOrNull()) |bin|{
+    while (bins.popOrNull()) |bin| {
         _ = try buildninja.write(bin);
         _ = try buildninja.write(" ");
         allocator.free(bin);
@@ -93,9 +91,8 @@ fn addModule(module: modulesJSON.Module, buildninja: fs.File, cwd: fs.Dir, alloc
     _ = try buildninja.write(module.name);
     _ = try buildninja.write(": phony $builddir/");
 
-    switch(module.mtype){
-        ModType.Default,
-        ModType.Executable => {
+    switch (module.mtype) {
+        ModType.Default, ModType.Executable => {
             _ = try buildninja.write(module.name);
         },
         ModType.StaticLibrary => {
@@ -106,7 +103,7 @@ fn addModule(module: modulesJSON.Module, buildninja: fs.File, cwd: fs.Dir, alloc
         ModType.SharedLibrary => {
             _ = try buildninja.write(module.name);
             _ = try buildninja.write(".so");
-        }
+        },
     }
 
     _ = try buildninja.write("\n\n");
@@ -137,6 +134,9 @@ pub fn ninja(cwd: fs.Dir, allocator: mem.Allocator, build: Build) !void {
     _ = try buildninja.write("  deps = gcc\n");
     _ = try buildninja.write("  command = c++ $includes $flags $cxxflags -c $in -MD -MT $out -MF $out.d -o $out\n");
     _ = try buildninja.write("  description = Building C++ object $out\n\n");
+    _ = try buildninja.write("rule zig-obj\n");
+    _ = try buildninja.write("  command = zig build-obj $includes $flags $in -femit-bin=$out -O ReleaseSmall\n");
+    _ = try buildninja.write("  description = Building Zig object $out\n\n");
     _ = try buildninja.write("rule lib\n");
     _ = try buildninja.write("  command = ar qc $out $in\n");
     _ = try buildninja.write("  description = Building static library $out\n\n");
@@ -146,7 +146,7 @@ pub fn ninja(cwd: fs.Dir, allocator: mem.Allocator, build: Build) !void {
     _ = try buildninja.write("rule exe\n");
     _ = try buildninja.write("  command = c++ -o $out $in $libs\n");
     _ = try buildninja.write("  description = Building executable $out\n\n");
-    
+
     for (modules.value) |module| {
         try addModule(module, buildninja, cwd, allocator);
     }
