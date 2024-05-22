@@ -1,3 +1,8 @@
+# Module generation
+ - [ ] Module lists languages
+ - [ ] Languages specifies commands
+ - [ ] Modules are independent from templates
+
 # Version 1.0
  - [x] Git support
  - [x] Register template
