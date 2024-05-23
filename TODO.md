@@ -2,7 +2,7 @@
  - [x] Git support
  - [x] Register template
  - [x] C++ support
- - [ ] Zig support
+ - [x] Zig support
 
 ## Version 1.1
  - [ ] Create project
