@@ -14,6 +14,8 @@ const loadModules = modulesJSON.load;
 const buildJSON = @import("../json/build.json.zig");
 const Build = buildJSON.Build;
 
+const languagesJSON = @import("../json/languages.json.zig");
+
 // TODO: Needs:
 // C std
 // C++ std
@@ -26,7 +28,7 @@ fn addModule(module: modulesJSON.Module, makefile: fs.File, cwd: fs.Dir, allocat
     var mdir = try cwd.openDir(module.name, .{ .iterate = true });
     defer mdir.close();
 
-    if (mem.eql(u8, module.template, "zig")) {
+    if (mem.eql(u8, module.languages[0], "zig")) {
         _ = try makefile.write("$(BUILD)/");
 
         if (module.mtype == ModType.StaticLibrary) {

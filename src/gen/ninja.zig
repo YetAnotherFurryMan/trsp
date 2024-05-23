@@ -25,7 +25,7 @@ fn addModule(module: modulesJSON.Module, buildninja: fs.File, cwd: fs.Dir, alloc
     var mdir = try cwd.openDir(module.name, .{ .iterate = true });
     defer mdir.close();
 
-    if (mem.eql(u8, module.template, "zig")) {
+    if (mem.eql(u8, module.languages[0], "zig")) {
         _ = try buildninja.write("build $builddir/");
         switch (module.mtype) {
             ModType.Default, ModType.Executable => {

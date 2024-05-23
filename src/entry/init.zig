@@ -12,8 +12,12 @@ const logf = l.logf;
 const defaultBuildJSON = "{\"name\":\"${name}\",\"builder\":\"Ninja\"}";
 const defaultModulesJSON = "[]";
 const defaultProjectsJSON = "[]";
+
 const defaultTemplatesJSON = "[\"c\"]";
-const defaultCTemplate = "{\"mod\":\"CompileAll\",\"exe\":{\"head\":[],\"src\":[{\"name\":\"main.c\",\"cnt\":\"#include <stdio.h>\\n\\nint main(int argc, const char** argv){\\n    printf(\\\"Hello World!\\\\n\\\");\\n    return 0;\\n}\\n\"}],\"main\":\"main.c\"},\"shared\":{\"head\":[{\"name\":\"${module}.h\",\"cnt\":\"#ifndef _${module}_H_\\n#define _${module}_H_\\n\\nvoid hello();\\n\\n#endif\"}],\"src\":[{\"name\":\"${module}.c\",\"cnt\":\"#include <stdio.h>\\n\\nvoid hello(){\\n    printf(\\\"Hello World!\\\\n\\\");\\n}\\n\"}],\"main\":\"${module}.c\"},\"static\":{\"head\":[{\"name\":\"${module}.h\",\"cnt\":\"#ifndef _${module}_H_\\n#define _${module}_H_\\n\\nvoid hello();\\n\\n#endif\"}],\"src\":[{\"name\":\"${module}.c\",\"cnt\":\"#include <stdio.h>\\n\\nvoid hello(){\\n    printf(\\\"Hello World!\\\\n\\\");\\n}\\n\"}],\"main\":\"${module}\"}}";
+const defaultCTemplate = "{\"languages\":[\"c\"],\"exe\":{\"head\":[],\"src\":[{\"name\":\"main.c\",\"cnt\":\"#include <stdio.h>\\n\\nint main(int argc, const char** argv){\\n    printf(\\\"Hello World!\\\\n\\\");\\n    return 0;\\n}\\n\"}],\"main\":\"main.c\"},\"shared\":{\"head\":[{\"name\":\"${module}.h\",\"cnt\":\"#ifndef _${module}_H_\\n#define _${module}_H_\\n\\nvoid hello();\\n\\n#endif\"}],\"src\":[{\"name\":\"${module}.c\",\"cnt\":\"#include <stdio.h>\\n\\nvoid hello(){\\n    printf(\\\"Hello World!\\\\n\\\");\\n}\\n\"}],\"main\":\"${module}.c\"},\"static\":{\"head\":[{\"name\":\"${module}.h\",\"cnt\":\"#ifndef _${module}_H_\\n#define _${module}_H_\\n\\nvoid hello();\\n\\n#endif\"}],\"src\":[{\"name\":\"${module}.c\",\"cnt\":\"#include <stdio.h>\\n\\nvoid hello(){\\n    printf(\\\"Hello World!\\\\n\\\");\\n}\\n\"}],\"main\":\"${module}\"}}";
+
+const defaultLanguagesJSON = "[\"c\"]";
+const defaultCLanguage = "{\"ext\":\".c\",\"exe\":{\"cmd\":[\"gcc -o ${target} ${objs}\"],\"obj\":[\"gcc -c -o ${file.o} ${file}\"]},\"lib\":{\"cmd\":[\"ar ac ${target} ${objs}\"],\"obj\":[\"gcc -c -o ${file.o} ${file} -fPIC\"]},\"dll\":{\"cmd\":[\"gcc --shared -o ${target} ${objs}\"],\"obj\":[\"gcc -c -o ${file.o} ${file} -fPIC\"]}}";
 
 pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
     var cwd = fs.cwd();
@@ -72,11 +76,17 @@ pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
     try conf.writeFile("modules.json", defaultModulesJSON);
     try conf.writeFile("projects.json", defaultProjectsJSON);
     try conf.writeFile("templates.json", defaultTemplatesJSON);
+    try conf.writeFile("languages.json", defaultLanguagesJSON);
 
     var tmpls = try conf.makeOpenPath("templates", .{});
     defer tmpls.close();
 
     try tmpls.writeFile("c.json", defaultCTemplate);
+
+    var langs = try conf.makeOpenPath("languages", .{});
+    defer langs.close();
+
+    try langs.writeFile("c.json", defaultCLanguage);
 
     logf(Log.Inf, "Succesfully generated project \"{s}\"!", .{name});
 

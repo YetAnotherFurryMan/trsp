@@ -5,10 +5,9 @@ const fs = std.fs;
 
 const loadJSON = @import("loadJSON.zig").loadJSON;
 
-pub const TemplateCompilationMod = enum { CompileAll, CompileMain };
 pub const TemplateFile = struct { name: []u8, cnt: []u8 };
 pub const TemplateMode = struct { head: []TemplateFile, src: []TemplateFile, main: []u8 };
-pub const Template = struct { mod: TemplateCompilationMod, exe: TemplateMode, shared: TemplateMode, static: TemplateMode };
+pub const Template = struct { languages: [][]u8, exe: TemplateMode, shared: TemplateMode, static: TemplateMode };
 
 pub inline fn load(cwd: fs.Dir, allocator: mem.Allocator, name: []const u8) !json.Parsed(Template) {
     const path = try mem.concat(allocator, u8, &[_][]const u8{ "trsp.conf/templates/", name, ".json" });

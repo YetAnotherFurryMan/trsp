@@ -231,14 +231,14 @@ pub fn entry(argsx: [][:0]const u8, allocator: mem.Allocator) !void {
     var name_copy = try str.copy(name.?, allocator);
     defer name_copy.deinit();
 
-    var template_copy = try str.copy(template.?, allocator);
-    defer template_copy.deinit();
+    //var template_copy = try str.copy(template.?, allocator);
+    //defer template_copy.deinit();
 
     var mods = std.ArrayList(Module).init(allocator);
     defer mods.deinit();
 
     try mods.appendSlice(modules.value);
-    try mods.append(.{ .name = name_copy.items, .template = template_copy.items, .libs = &[_][]u8{}, .mtype = modType });
+    try mods.append(.{ .name = name_copy.items, .languages = tmpl.?.value.languages, .libs = &[_][]u8{}, .mtype = modType });
 
     var file = try cwd.openFile("trsp.conf/modules.json", .{ .mode = fs.File.OpenMode.write_only });
     defer file.close();
