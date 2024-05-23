@@ -25,67 +25,129 @@ good $?
 echo Enter foo
 cd foo
 
-echo Create module a
-./trsp module a --template=c --exe
+echo Create module c1
+./trsp module c1 --template=c --exe
 good $?
 
-mkdir a/a
-echo "#warning Hello World" >> a/a/a.c
+mkdir c1/a
+echo "#warning Hello World" >> c1/a/a.c
 
-echo Create module b
-./trsp module b -tc -e
+echo Create module c2
+./trsp module c2 -tc -e
 good $?
 
-echo Create module c
-./trsp module c -tc -l
+echo Create module c3
+./trsp module c3 -tc -l
 good $?
 
-echo Create module d
-./trsp module d -tc -d
+echo Create module c4
+./trsp module c4 -tc -d
 good $?
 
-echo Build default {zig, ninja}
+echo Build default {ninja}
 ./trsp build
 good $?
 
-# ./build/a
-# good $?
+./build/c1
+good $?
 
-# ./build/b
-# good $?
+./build/c2
+good $?
 
-echo Build reconfigure {zig, make}
+echo Build reconfigure {make}
 ./trsp build --builder=make
 good $?
 
-# ./build/a
-# good $?
-
-# ./build/b
-# good $?
-
-echo Build reconfigure {cmake, make}
-./trsp build --generator=cmake
+./build/c1
 good $?
 
-./build/a
-good $?
-
-./build/b
-good $?
-
-echo Build reconfigure {cmake, ninja}
-./trsp build --builder=ninja
-good $?
-
-./build/a
-good $?
-
-./build/b
+./build/c2
 good $?
 
 echo Release
 ./trsp release
+good $?
+
+echo Config git
+./trsp config --git
+good $?
+
+echo Git add
+git add .
+good $?
+
+echo Register template c++
+./trsp template --c++
+good $?
+
+echo Create module cpp1
+./trsp module cpp1 --template=c++ --exe
+good $?
+
+echo Create module cpp2
+./trsp module cpp2 -tc++ -l
+good $?
+
+echo Create module cpp3
+./trsp module cpp3 -tc++ -d
+good $?
+
+echo Build reconfigure {ninja}
+./trsp build -bninja
+good $?
+
+./build/c1
+good $?
+
+./build/c2
+good $?
+
+./build/cpp1
+good $?
+
+echo Build reconfigure {make}
+./trsp build --builder=make
+good $?
+
+./build/c1
+good $?
+
+./build/c2
+good $?
+
+./build/cpp1
+good $?
+
+echo Register template zig
+./trsp template --zig
+good $?
+
+echo Create module zig1
+./trsp module zig1 --template=zig --exe
+good $?
+
+echo Create module zig2
+./trsp module zig2 -tzig -l
+good $?
+
+echo Create module zig3
+./trsp module zig3 -tzig -d
+good $?
+
+echo Build reconfigure {Ninja}
+./trsp build
+good $?
+
+./build/c1
+good $?
+
+./build/c2
+good $?
+
+./build/cpp1
+good $?
+
+./build/zig1
 good $?
 
 echo Leave foo
