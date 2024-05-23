@@ -1,8 +1,3 @@
-# Module generation
- - [ ] Module lists languages
- - [ ] Languages specifies commands
- - [ ] Modules are independent from templates
-
 # Version 1.0
  - [x] Git support
  - [x] Register template
@@ -53,3 +48,16 @@
  - [x] renaming project (config entry)
  - [x] build entry
  - [x] release entry
+
+# Planned 
+
+## Build systems
+ - [ ] CMake
+ - [ ] XMake
+
+## Module generation
+ - [ ] Module lists languages
+ - [ ] Languages specifies commands
+ - [ ] Modules are independent from templates
+
+
