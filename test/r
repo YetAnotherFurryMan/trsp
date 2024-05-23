@@ -44,7 +44,7 @@ echo Create module c4
 ./trsp module c4 -tc -d
 good $?
 
-echo Build default {zig, ninja}
+echo Build default {ninja}
 ./trsp build
 good $?
 
@@ -54,28 +54,8 @@ good $?
 ./build/c2
 good $?
 
-echo Build reconfigure {zig, make}
+echo Build reconfigure {make}
 ./trsp build --builder=make
-good $?
-
-./build/c1
-good $?
-
-./build/c2
-good $?
-
-echo Build reconfigure {cmake, make}
-./trsp build --generator=cmake
-good $?
-
-./build/c1
-good $?
-
-./build/c2
-good $?
-
-echo Build reconfigure {cmake, ninja}
-./trsp build --builder=ninja
 good $?
 
 ./build/c1
@@ -112,8 +92,8 @@ echo Create module cpp3
 ./trsp module cpp3 -tc++ -d
 good $?
 
-echo Build reconfigure {zig, ninja}
-./trsp build -gzig -bninja
+echo Build reconfigure {ninja}
+./trsp build -bninja
 good $?
 
 ./build/c1
@@ -125,34 +105,8 @@ good $?
 ./build/cpp1
 good $?
 
-echo Build reconfigure {zig, make}
+echo Build reconfigure {make}
 ./trsp build --builder=make
-good $?
-
-./build/c1
-good $?
-
-./build/c2
-good $?
-
-./build/cpp1
-good $?
-
-echo Build reconfigure {cmake, make}
-./trsp build --generator=cmake
-good $?
-
-./build/c1
-good $?
-
-./build/c2
-good $?
-
-./build/cpp1
-good $?
-
-echo Build reconfigure {cmake, ninja}
-./trsp build --builder=ninja
 good $?
 
 ./build/c1
@@ -180,8 +134,8 @@ echo Create module zig3
 ./trsp module zig3 -tzig -d
 good $?
 
-echo Build reconfigure {Zig, ninja}
-./trsp build -gzig
+echo Build reconfigure {Ninja}
+./trsp build
 good $?
 
 ./build/c1

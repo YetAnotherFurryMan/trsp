@@ -16,7 +16,6 @@ const BuildGen = buildJSON.BuildGen;
 const Build = buildJSON.Build;
 const loadBuild = buildJSON.load;
 
-const cmake = @import("../gen/cmake.zig");
 const make = @import("../gen/make.zig");
 const ninja = @import("../gen/ninja.zig");
 
@@ -50,13 +49,11 @@ pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
 
     const cwd = fs.cwd();
 
-    var generator_s: ?[]const u8 = null;
     var builder_s: ?[]const u8 = null;
 
     log(Log.Inf, "Parsing command-line arguments...");
 
     const descriptions = [_]cla.ArgDescription{
-        .{ .short = 'g', .long = "generator" },
         .{ .short = 'b', .long = "builder" },
     };
 
@@ -74,20 +71,6 @@ pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
         }
 
         switch (descriptions[@bitCast(arg.id)].short) {
-            'g' => {
-                if (generator_s != null) {
-                    logf(Log.Err, "Generator already changed \"{?s}\" > \"{?s}\"", .{ generator_s, arg.value });
-                    return Err.Changed;
-                }
-
-                if (arg.value == null) {
-                    log(Log.Err, "Excepted value.");
-                    log(Log.Note, "Try using \'=\' or delete space before the flag argument.");
-                    return Err.NoValue;
-                }
-
-                generator_s = arg.value;
-            },
             'b' => {
                 if (builder_s != null) {
                     logf(Log.Err, "Builder already changed \"{?s}\" > \"{?s}\"", .{ builder_s, arg.value });
@@ -114,18 +97,6 @@ pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
 
     log(Log.Inf, "Validating data...");
 
-    var generator = _build.value.gen;
-    if (generator_s != null) {
-        if (mem.eql(u8, generator_s.?, "zig")) {
-            generator = BuildGen.Zig;
-        } else if (mem.eql(u8, generator_s.?, "cmake")) {
-            generator = BuildGen.CMake;
-        } else {
-            logf(Log.Err, "Unknown generator \"{?s}\".", .{generator_s});
-            return Err.BadGenerator;
-        }
-    }
-
     var builder = _build.value.builder;
     if (builder_s != null) {
         if (mem.eql(u8, builder_s.?, "make")) {
@@ -138,42 +109,23 @@ pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
         }
     }
 
-    logf(Log.Deb, "Generator: {}", .{generator});
     logf(Log.Deb, "Builder: {}", .{builder});
 
     const newBuild: Build = .{
         .name = _build.value.name,
         .builder = builder,
-        .gen = generator,
     };
 
     try cleanUp();
 
-    switch (generator) {
-        BuildGen.Zig => {
-            switch(builder){
-                BuildBuilder.Ninja => {
-                    try ninja.ninja(cwd, allocator, newBuild);
-                    try child.run(&[_][]const u8{"ninja"});
-                },
-                BuildBuilder.Make => {
-                    try make.make(cwd, allocator, newBuild);
-                    try child.run(&[_][]const u8{"make"});
-                },
-            }
+    switch (builder) {
+        BuildBuilder.Ninja => {
+            try ninja.ninja(cwd, allocator, newBuild);
+            try child.run(&[_][]const u8{"ninja"});
         },
-        BuildGen.CMake => {
-            try cmake.cmake(cwd, allocator, newBuild);
-            switch(builder){
-                BuildBuilder.Ninja => {
-                    try child.run(&[_][]const u8{"cmake", "-S", ".", "-B", "build", "-G", "Ninja"});
-                    try child.run(&[_][]const u8{"ninja", "-C", "build"});
-                },  
-                BuildBuilder.Make => {
-                    try child.run(&[_][]const u8{"cmake", "-S", ".", "-B", "build", "-G", "Unix Makefiles"});
-                    try child.run(&[_][]const u8{"make", "-C", "build"});
-                },
-            }
+        BuildBuilder.Make => {
+            try make.make(cwd, allocator, newBuild);
+            try child.run(&[_][]const u8{"make"});
         },
     }
 
@@ -188,5 +140,3 @@ pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
 
     log(Log.Inf, "Succesfully builded.");
 }
-
-

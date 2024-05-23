@@ -9,7 +9,7 @@ const Log = l.Log;
 const log = l.log;
 const logf = l.logf;
 
-const defaultBuildJSON = "{\"name\":\"${name}\",\"gen\":\"Zig\",\"builder\":\"Ninja\"}";
+const defaultBuildJSON = "{\"name\":\"${name}\",\"builder\":\"Ninja\"}";
 const defaultModulesJSON = "[]";
 const defaultProjectsJSON = "[]";
 const defaultTemplatesJSON = "[\"c\"]";

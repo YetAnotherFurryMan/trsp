@@ -27,11 +27,8 @@ pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
 
     const cwd = fs.cwd();
 
-    const descriptions = [_]cla.ArgDescription{
-        .{ .short = 0, .long="project-name" },
-        .{ .short = 0, .long="git" }
-    };
-    
+    const descriptions = [_]cla.ArgDescription{ .{ .short = 0, .long = "project-name" }, .{ .short = 0, .long = "git" } };
+
     var argList = try cla.parse(args, &descriptions, allocator);
     defer argList.deinit();
 
@@ -44,7 +41,7 @@ pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
         }
 
         const a = descriptions[@bitCast(arg.id)].long;
-        if(mem.eql(u8, a, "project-name")){
+        if (mem.eql(u8, a, "project-name")) {
             if (arg.value == null) {
                 log(Log.Err, "Excepted value.");
                 log(Log.Note, "Try using \'=\' or delete space before the flag argument.");
@@ -60,32 +57,31 @@ pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
             const newBuild: Build = .{
                 .name = name_cpy.items,
                 .builder = build.value.builder,
-                .gen = build.value.gen,
             };
 
             log(Log.Inf, "Updating trsp.conf/build.json");
 
             var file = try cwd.openFile("trsp.conf/build.json", .{ .mode = fs.File.OpenMode.write_only });
             defer file.close();
-  
+
             var writer = file.writer();
             try json.stringify(newBuild, .{}, writer);
             _ = try writer.write("\n"); // Wreid error with additional } at the end of file
 
             log(Log.Inf, "Done");
-        } else if(mem.eql(u8, a, "git")){
+        } else if (mem.eql(u8, a, "git")) {
             if (arg.value != null) {
                 log(Log.Err, "Unexpected value for 'git' flag.");
                 return Err.BadArg;
             }
 
             var accessed = true;
-            cwd.access(".git", .{}) catch |e| switch(e){
+            cwd.access(".git", .{}) catch |e| switch (e) {
                 fs.Dir.AccessError.FileNotFound => {
                     accessed = false;
 
                     log(Log.Inf, "Initializing git...");
-                    try child.run(&[_][]const u8{"git", "init"});
+                    try child.run(&[_][]const u8{ "git", "init" });
 
                     log(Log.Inf, "Creating .gitignore...");
                     try cwd.writeFile(".gitignore", default_gitignore);
@@ -93,10 +89,10 @@ pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
                 else => {
                     log(Log.Err, "Unknown error.");
                     return e;
-                }
+                },
             };
 
-            if(accessed){
+            if (accessed) {
                 log(Log.Err, "Git already initiated!");
                 return Err.CannotPerform;
             }
@@ -110,4 +106,3 @@ pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
 
     log(Log.Inf, "Succefully reconfigured.");
 }
-

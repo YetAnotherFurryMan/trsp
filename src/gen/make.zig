@@ -26,6 +26,40 @@ fn addModule(module: modulesJSON.Module, makefile: fs.File, cwd: fs.Dir, allocat
     var mdir = try cwd.openDir(module.name, .{ .iterate = true });
     defer mdir.close();
 
+    if (mem.eql(u8, module.template, "zig")) {
+        _ = try makefile.write("$(BUILD)/");
+
+        if (module.mtype == ModType.StaticLibrary) {
+            _ = try makefile.write("lib");
+        }
+
+        _ = try makefile.write(module.name);
+
+        switch (module.mtype) {
+            ModType.StaticLibrary => {
+                _ = try makefile.write(".a: ");
+                _ = try makefile.write(module.name);
+                _ = try makefile.write("/");
+                _ = try makefile.write(module.name);
+                _ = try makefile.write(".zig\n\t$(ZIG) build-lib -static -femit-bin=$@ $^\n\n");
+            },
+            ModType.SharedLibrary => {
+                _ = try makefile.write(".so: ");
+                _ = try makefile.write(module.name);
+                _ = try makefile.write("/");
+                _ = try makefile.write(module.name);
+                _ = try makefile.write(".zig\n\t$(ZIG) build-lib -dynamic -femit-bin=$@ $^\n\n");
+            },
+            else => {
+                _ = try makefile.write(": ");
+                _ = try makefile.write(module.name);
+                _ = try makefile.write("/main.zig\n\t$(ZIG) build-exe -femit-bin=$@ $^\n\n");
+            },
+        }
+
+        return;
+    }
+
     _ = try makefile.write("$(BUILD)/");
 
     if (module.mtype == ModType.StaticLibrary) {
