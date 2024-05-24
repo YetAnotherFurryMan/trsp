@@ -135,7 +135,7 @@ echo Create module zig3
 good $?
 
 echo Build reconfigure {Ninja}
-./trsp build
+./trsp build -bninja
 good $?
 
 ./build/c1

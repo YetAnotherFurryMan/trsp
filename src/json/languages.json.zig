@@ -5,7 +5,7 @@ const fs = std.fs;
 
 const loadJSON = @import("loadJSON.zig").loadJSON;
 
-pub const LanguageMod = struct { cmd: [][]u8, obj: [][]u8 };
+pub const LanguageMod = struct { cmd: []u8, obj: ?[]u8 };
 pub const Language = struct { ext: []u8, exe: LanguageMod, lib: LanguageMod, dll: LanguageMod };
 
 pub inline fn load(cwd: fs.Dir, allocator: mem.Allocator, name: []const u8) !json.Parsed(Language) {

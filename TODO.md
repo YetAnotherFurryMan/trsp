@@ -5,21 +5,26 @@
  - [x] Zig support
 
 ## Version 1.1
- - [ ] Create project
  - [ ] help entry
 
-## Version 1.2
- - [ ] Register module
- - [ ] Register project
+## Vrsion 1.x - Polishing
+ - [ ] When registering template validate if languages are registered
+ - [ ] When registering template validate if name is valid
+ - [ ] template entry => register -t (--template) entry
+ - [ ] register -l (--language)
+ - [ ] register -m (--module)
 
 # Version 2.0
+ - [ ] project entry
  - [ ] Radicle support
- - [ ] Custom languages
  - [ ] Bash support (as build system)
  - [ ] Rust support
  - [ ] Fortran support
  - [ ] D support
  - [ ] Nasm support
+
+## Version 2.x - Polishing
+ - [ ] register -p (--project)
 
 # Version 3.0
  - [ ] Scripting languages support
