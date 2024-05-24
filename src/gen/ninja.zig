@@ -117,7 +117,7 @@ fn addModule(module: modulesJSON.Module, buildninja: fs.File, cwd: fs.Dir, alloc
     var bins = std.ArrayList([]u8).init(allocator);
     defer bins.deinit();
 
-    while (filelist.popOrNull()) |e| {
+    while_filelist: while (filelist.popOrNull()) |e| {
         defer allocator.free(e);
         const ext = fs.path.extension(e);
         var it = t.iterator();
@@ -137,7 +137,7 @@ fn addModule(module: modulesJSON.Module, buildninja: fs.File, cwd: fs.Dir, alloc
                 _ = try buildninja.write("\n");
 
                 try bins.append(bin);
-                break;
+                continue :while_filelist;
             }
         }
 
