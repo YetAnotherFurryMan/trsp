@@ -80,36 +80,6 @@ fn addModule(module: modulesJSON.Module, buildninja: fs.File, cwd: fs.Dir, alloc
     var mdir = try cwd.openDir(module.name, .{ .iterate = true });
     defer mdir.close();
 
-    // if (mem.eql(u8, module.languages[0], "zig")) {
-    //     _ = try buildninja.write("build $builddir/");
-    //     switch (module.mtype) {
-    //         ModType.Default, ModType.Executable => {
-    //             _ = try buildninja.write(module.name);
-    //             _ = try buildninja.write(": zig-exe ");
-    //             _ = try buildninja.write(module.name);
-    //             _ = try buildninja.write("/main.zig\n");
-    //         },
-    //         ModType.StaticLibrary => {
-    //             _ = try buildninja.write("lib");
-    //             _ = try buildninja.write(module.name);
-    //             _ = try buildninja.write(".a: zig-lib ");
-    //             _ = try buildninja.write(module.name);
-    //             _ = try buildninja.write("/");
-    //             _ = try buildninja.write(module.name);
-    //             _ = try buildninja.write(".zig\n");
-    //         },
-    //         ModType.SharedLibrary => {
-    //             _ = try buildninja.write(module.name);
-    //             _ = try buildninja.write(".so: zig-dll ");
-    //             _ = try buildninja.write(module.name);
-    //             _ = try buildninja.write("/");
-    //             _ = try buildninja.write(module.name);
-    //             _ = try buildninja.write(".zig\n");
-    //         },
-    //     }
-    //     return;
-    // }
-
     // WARNING: each record must be freed manualy!!!
     var filelist = try listFiles(mdir, allocator);
     defer filelist.deinit();
@@ -199,44 +169,6 @@ pub fn ninja(cwd: fs.Dir, allocator: mem.Allocator, build: Build) !void {
     var modules = try loadModules(cwd, allocator);
     defer modules.deinit();
 
-    log(Log.Inf, "Generating build.ninja");
-    _ = try buildninja.write("ninja_required_version = 1.5\n\n");
-    _ = try buildninja.write("builddir = build\n\n");
-    // _ = try buildninja.write("cflags = -Wall -Wextra -Wpedantic -std=c17\n");
-    // _ = try buildninja.write("cxxflags = -Wall -Wextra -Wpedantic -std=c++20\n");
-    // _ = try buildninja.write("ldflags = -L./$builddir\n\n");
-    // _ = try buildninja.write("rule cc\n");
-    // _ = try buildninja.write("  depfile = $out.d\n");
-    // _ = try buildninja.write("  deps = gcc\n");
-    // _ = try buildninja.write("  command = cc $includes $flags $cflags -c $in -MD -MT $out -MF $out.d -o $out\n");
-    // _ = try buildninja.write("  description = Building C object $out\n\n");
-    // _ = try buildninja.write("rule cpp\n");
-    // _ = try buildninja.write("  depfile = $out.d\n");
-    // _ = try buildninja.write("  deps = gcc\n");
-    // _ = try buildninja.write("  command = c++ $includes $flags $cxxflags -c $in -MD -MT $out -MF $out.d -o $out -fno-use-cxa-atexit\n");
-    // _ = try buildninja.write("  description = Building C++ object $out\n\n");
-    // _ = try buildninja.write("rule zig-obj\n");
-    // _ = try buildninja.write("  command = zig build-obj $includes $flags $in -femit-bin=$out -O ReleaseSmall\n");
-    // _ = try buildninja.write("  description = Building Zig object $out\n\n");
-    // _ = try buildninja.write("rule zig-exe\n");
-    // _ = try buildninja.write("  command = zig build-exe $includes $flags $in -femit-bin=$out\n");
-    // _ = try buildninja.write("  description = Building Zig executable $out\n\n");
-    // _ = try buildninja.write("rule zig-lib\n");
-    // _ = try buildninja.write("  command = zig build-lib $includes $flags $in -femit-bin=$out -static\n");
-    // _ = try buildninja.write("  description = Building Zig static library $out\n\n");
-    // _ = try buildninja.write("rule zig-dll\n");
-    // _ = try buildninja.write("  command = zig build-lib $includes $flags $in -femit-bin=$out -dynamic\n");
-    // _ = try buildninja.write("  description = Building Zig shared library $out\n\n");
-    // _ = try buildninja.write("rule lib\n");
-    // _ = try buildninja.write("  command = ar qc $out $in\n");
-    // _ = try buildninja.write("  description = Building static library $out\n\n");
-    // _ = try buildninja.write("rule dll\n");
-    // _ = try buildninja.write("  command = ld --shared $ldflags -o $out $in\n");
-    // _ = try buildninja.write("  description = Building dynamic library $out\n\n");
-    // _ = try buildninja.write("rule exe\n");
-    // _ = try buildninja.write("  command = c++ -o $out $in $libs\n");
-    // _ = try buildninja.write("  description = Building executable $out\n\n");
-
     var languages_map = std.StringHashMap(json.Parsed(Language)).init(allocator);
     defer {
         var languages_map_it = languages_map.iterator();
@@ -254,6 +186,10 @@ pub fn ninja(cwd: fs.Dir, allocator: mem.Allocator, build: Build) !void {
             }
         }
     }
+
+    log(Log.Inf, "Generating build.ninja");
+    _ = try buildninja.write("ninja_required_version = 1.5\n\n");
+    _ = try buildninja.write("builddir = build\n\n");
 
     var languages_map_it = languages_map.iterator();
     while (languages_map_it.next()) |entry| {

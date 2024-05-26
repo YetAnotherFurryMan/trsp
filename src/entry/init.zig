@@ -14,12 +14,9 @@ const defaultModulesJSON = "[]";
 const defaultProjectsJSON = "[]";
 
 const defaultTemplatesJSON = "[\"c\"]";
-const defaultCTemplate = "{\"languages\":[\"c\"],\"exe\":{\"head\":[],\"src\":[{\"name\":\"main.c\",\"cnt\":\"#include <stdio.h>\\n\\nint main(int argc, const char** argv){\\n    printf(\\\"Hello World!\\\\n\\\");\\n    return 0;\\n}\\n\"}],\"main\":\"main.c\"},\"shared\":{\"head\":[{\"name\":\"${module}.h\",\"cnt\":\"#ifndef _${module}_H_\\n#define _${module}_H_\\n\\nvoid hello();\\n\\n#endif\"}],\"src\":[{\"name\":\"${module}.c\",\"cnt\":\"#include <stdio.h>\\n\\nvoid hello(){\\n    printf(\\\"Hello World!\\\\n\\\");\\n}\\n\"}],\"main\":\"${module}.c\"},\"static\":{\"head\":[{\"name\":\"${module}.h\",\"cnt\":\"#ifndef _${module}_H_\\n#define _${module}_H_\\n\\nvoid hello();\\n\\n#endif\"}],\"src\":[{\"name\":\"${module}.c\",\"cnt\":\"#include <stdio.h>\\n\\nvoid hello(){\\n    printf(\\\"Hello World!\\\\n\\\");\\n}\\n\"}],\"main\":\"${module}\"}}";
-
 const defaultLanguagesJSON = "[\"c\",\"cxx\",\"zig\"]";
-const defaultCLanguage = "{\"ext\":\".c\",\"exe\":{\"cmd\":\"gcc -o ${out} ${in}\",\"obj\":\"gcc -c -o ${out} ${in}\"},\"lib\":{\"cmd\":\"ar qc ${out} ${in}\",\"obj\":\"gcc -c -o ${out} ${in} -fPIC\"},\"dll\":{\"cmd\":\"gcc --shared -o ${out} ${in}\",\"obj\":\"gcc -c -o ${out} ${in} -fPIC\"}}";
-const defaultCXXLanguage = "{\"ext\":\".cpp\",\"exe\":{\"cmd\":\"g++ -o ${out} ${in}\",\"obj\":\"g++ -c -o ${out} ${in}\"},\"lib\":{\"cmd\":\"ar qc ${out} ${in}\",\"obj\":\"g++ -c -o ${out} ${in} -fPIC\"},\"dll\":{\"cmd\":\"g++ --shared -o ${out} ${in}\",\"obj\":\"g++ -c -o ${out} ${in} -fPIC\"}}";
-const defaultZigLanguage = "{\"ext\":\".zig\",\"exe\":{\"cmd\":\"zig build-exe -femit-bin=${out} ${in}\",\"obj\":null},\"lib\":{\"cmd\":\"zig build-lib -static -femit-bin=${out} ${in}\",\"obj\":null},\"dll\":{\"cmd\":\"zig build-lib -dynamic -femit-bin=${out} ${in}\",\"obj\":null}}";
+
+const defaults = @import("../defaults.zig");
 
 pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
     var cwd = fs.cwd();
@@ -83,14 +80,14 @@ pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
     var tmpls = try conf.makeOpenPath("templates", .{});
     defer tmpls.close();
 
-    try tmpls.writeFile("c.json", defaultCTemplate);
+    try tmpls.writeFile("c.json", defaults.defaultCTemplate);
 
     var langs = try conf.makeOpenPath("languages", .{});
     defer langs.close();
 
-    try langs.writeFile("c.json", defaultCLanguage);
-    try langs.writeFile("cxx.json", defaultCXXLanguage);
-    try langs.writeFile("zig.json", defaultZigLanguage);
+    try langs.writeFile("c.json", defaults.defaultCLanguage);
+    try langs.writeFile("cxx.json", defaults.defaultCXXLanguage);
+    try langs.writeFile("zig.json", defaults.defaultZigLanguage);
 
     logf(Log.Inf, "Succesfully generated project \"{s}\"!", .{name});
 

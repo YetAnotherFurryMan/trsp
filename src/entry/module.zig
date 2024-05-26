@@ -208,23 +208,15 @@ pub fn entry(argsx: [][:0]const u8, allocator: mem.Allocator) !void {
     var moduleDir = try cwd.makeOpenPath(name.?, .{});
     defer moduleDir.close();
 
-    const tmplMode = switch (modType) {
-        ModType.Executable => tmpl.?.value.exe,
-        ModType.SharedLibrary => tmpl.?.value.shared,
-        ModType.StaticLibrary => tmpl.?.value.static,
+    try switch (modType) {
+        ModType.Executable => templatesJSON.createWrite(moduleDir, allocator, tmpl.?.value.exe, name.?),
+        ModType.SharedLibrary => templatesJSON.createWrite(moduleDir, allocator, tmpl.?.value.shared, name.?),
+        ModType.StaticLibrary => templatesJSON.createWrite(moduleDir, allocator, tmpl.?.value.static, name.?),
         else => {
             log(Log.Err, "Unhandled modType...");
             return Err.Unreachable;
         },
     };
-
-    for (tmplMode.src) |file| {
-        try templatesJSON.write(moduleDir, allocator, file, name.?);
-    }
-
-    for (tmplMode.head) |file| {
-        try templatesJSON.write(cwd, allocator, file, name.?);
-    }
 
     logf(Log.Inf, "Registering module \"{s}\"...", .{name.?});
 

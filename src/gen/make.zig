@@ -1,4 +1,5 @@
 const std = @import("std");
+const json = std.json;
 const mem = std.mem;
 const fs = std.fs;
 
@@ -6,6 +7,8 @@ const l = @import("../log.zig");
 const Log = l.Log;
 const log = l.log;
 const logf = l.logf;
+
+const str = @import("../common/str.zig");
 
 const modulesJSON = @import("../json/modules.json.zig");
 const ModType = modulesJSON.ModType;
@@ -15,16 +18,22 @@ const buildJSON = @import("../json/build.json.zig");
 const Build = buildJSON.Build;
 
 const languagesJSON = @import("../json/languages.json.zig");
+const loadLanguage = languagesJSON.load;
+const compileLanguage = languagesJSON.compileCmd;
+const Language = languagesJSON.Language;
 
 // TODO: Needs:
 // C std
 // C++ std
 // Other languages like ZIG or Fortran
+// TODO: Language precompilation
 
 const listFiles = @import("listFiles.zig").listFiles;
 const listDirs = @import("listFiles.zig").listDirs;
 
-fn addModule(module: modulesJSON.Module, makefile: fs.File, cwd: fs.Dir, allocator: mem.Allocator) !void {
+fn addModule(module: modulesJSON.Module, makefile: fs.File, cwd: fs.Dir, allocator: mem.Allocator, languages_map: std.StringHashMap(Language)) !void {
+    _ = languages_map;
+
     var mdir = try cwd.openDir(module.name, .{ .iterate = true });
     defer mdir.close();
 
@@ -150,14 +159,52 @@ pub fn make(cwd: fs.Dir, allocator: mem.Allocator, build: Build) !void {
     var modules = try loadModules(cwd, allocator);
     defer modules.deinit();
 
+    var languages_map = std.StringHashMap(Language).init(allocator);
+    defer {
+        var languages_map_it = languages_map.iterator();
+        while (languages_map_it.next()) |entry| {
+            allocator.free(entry.value_ptr.ext);
+            allocator.free(entry.value_ptr.exe.cmd);
+            allocator.free(entry.value_ptr.lib.cmd);
+            allocator.free(entry.value_ptr.dll.cmd);
+            if (entry.value_ptr.exe.obj != null) allocator.free(entry.value_ptr.exe.obj.?);
+            if (entry.value_ptr.lib.obj != null) allocator.free(entry.value_ptr.lib.obj.?);
+            if (entry.value_ptr.dll.obj != null) allocator.free(entry.value_ptr.dll.obj.?);
+        }
+        languages_map.deinit();
+    }
+
+    for (modules.value) |module| {
+        for (module.languages) |name| {
+            if (languages_map.get(name) == null) {
+                const lang = try loadLanguage(cwd, allocator, name);
+                defer lang.deinit();
+
+                const lg: Language = .{
+                    .ext = (try str.copy(lang.value.ext, allocator)).items,
+                    .exe = .{
+                        .cmd = try languagesJSON.compileCmd(allocator, lang.value.exe.cmd, "$^", "$@"),
+                        .obj = if (lang.value.exe.obj == null) null else try languagesJSON.compileCmd(allocator, lang.value.exe.obj.?, "$^", "$@"),
+                    },
+                    .lib = .{
+                        .cmd = try languagesJSON.compileCmd(allocator, lang.value.lib.cmd, "$^", "$@"),
+                        .obj = if (lang.value.lib.obj == null) null else try languagesJSON.compileCmd(allocator, lang.value.lib.obj.?, "$^", "$@"),
+                    },
+                    .dll = .{
+                        .cmd = try languagesJSON.compileCmd(allocator, lang.value.dll.cmd, "$^", "$@"),
+                        .obj = if (lang.value.dll.obj == null) null else try languagesJSON.compileCmd(allocator, lang.value.dll.obj.?, "$^", "$@"),
+                    },
+                };
+
+                try languages_map.put(name, lg);
+            }
+        }
+    }
+
     log(Log.Inf, "Generating Makefile");
     _ = try makefile.write("BUILD ?= build\n\n");
     _ = try makefile.write("RM ?= rm -f\n");
-    _ = try makefile.write("MKDIR ?= mkdir\n");
-    _ = try makefile.write("ZIG ?= zig\n\n");
-    _ = try makefile.write("cflags := -Wall -Wextra -Wpedantic -std=c17\n");
-    _ = try makefile.write("cxxflags := -Wall -Wextra -Wpedantic -std=c++20\n");
-    _ = try makefile.write("ldflags := -L./$(BUILD)\n\n");
+    _ = try makefile.write("MKDIR ?= mkdir\n\n");
 
     _ = try makefile.write("dirs := $(BUILD) ");
     for (modules.value) |module| {
@@ -181,8 +228,6 @@ pub fn make(cwd: fs.Dir, allocator: mem.Allocator, build: Build) !void {
         }
     }
     _ = try makefile.write("\n\n");
-
-    // _ = try makefile.write(".SUFIXES: .c .cpp .o .a .so\n\n");
 
     _ = try makefile.write(".PHONY: all\n");
     _ = try makefile.write("all: $(dirs) ");
@@ -209,9 +254,9 @@ pub fn make(cwd: fs.Dir, allocator: mem.Allocator, build: Build) !void {
     _ = try makefile.write("clean:\n");
     _ = try makefile.write("\t$(RM) -r $(BUILD)\n\n");
     _ = try makefile.write("$(dirs):\n");
-    _ = try makefile.write("\t$(MKDIR) $@\n\n");
+    _ = try makefile.write("\t$(MKDIR) -p $@\n\n");
 
     for (modules.value) |module| {
-        try addModule(module, makefile, cwd, allocator);
+        try addModule(module, makefile, cwd, allocator, languages_map);
     }
 }
