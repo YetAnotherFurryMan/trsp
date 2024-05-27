@@ -71,12 +71,6 @@ fn addModule(module: modulesJSON.Module, buildninja: fs.File, cwd: fs.Dir, alloc
         return;
     }
 
-    const type_str = switch (module.mtype) {
-        ModType.Default, ModType.Executable => "exe",
-        ModType.StaticLibrary => "lib",
-        ModType.SharedLibrary => "dll",
-    };
-
     var mdir = try cwd.openDir(module.name, .{ .iterate = true });
     defer mdir.close();
 
@@ -97,9 +91,12 @@ fn addModule(module: modulesJSON.Module, buildninja: fs.File, cwd: fs.Dir, alloc
 
                 _ = try buildninja.write("build ");
                 _ = try buildninja.write(bin);
-
                 _ = try buildninja.write(": ");
-                _ = try buildninja.write(type_str);
+                _ = try buildninja.write(switch (module.mtype) {
+                    ModType.Default, ModType.Executable => "exe",
+                    ModType.StaticLibrary => "lib",
+                    ModType.SharedLibrary => "dll",
+                });
                 _ = try buildninja.write("-obj-");
                 _ = try buildninja.write(lang.key_ptr.*);
                 _ = try buildninja.write(" ");

@@ -51,11 +51,11 @@ pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
             var build = try loadBuild(cwd, allocator);
             defer build.deinit();
 
-            var name_cpy = try str.copy(arg.value.?, allocator);
-            defer name_cpy.deinit();
+            const name_cpy = try str.copy(arg.value.?, allocator);
+            defer allocator.free(name_cpy);
 
             const newBuild: Build = .{
-                .name = name_cpy.items,
+                .name = name_cpy,
                 .builder = build.value.builder,
             };
 

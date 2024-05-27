@@ -220,8 +220,8 @@ pub fn entry(argsx: [][:0]const u8, allocator: mem.Allocator) !void {
 
     logf(Log.Inf, "Registering module \"{s}\"...", .{name.?});
 
-    var name_copy = try str.copy(name.?, allocator);
-    defer name_copy.deinit();
+    const name_copy = try str.copy(name.?, allocator);
+    defer allocator.free(name_copy);
 
     //var template_copy = try str.copy(template.?, allocator);
     //defer template_copy.deinit();
@@ -230,7 +230,7 @@ pub fn entry(argsx: [][:0]const u8, allocator: mem.Allocator) !void {
     defer mods.deinit();
 
     try mods.appendSlice(modules.value);
-    try mods.append(.{ .name = name_copy.items, .languages = tmpl.?.value.languages, .libs = &[_][]u8{}, .mtype = modType });
+    try mods.append(.{ .name = name_copy, .languages = tmpl.?.value.languages, .libs = &[_][]u8{}, .mtype = modType });
 
     var file = try cwd.openFile("trsp.conf/modules.json", .{ .mode = fs.File.OpenMode.write_only });
     defer file.close();
