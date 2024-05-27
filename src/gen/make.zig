@@ -30,10 +30,7 @@ const Language = languagesJSON.Language;
 const listFiles = @import("listFiles.zig").listFiles;
 const listDirs = @import("listFiles.zig").listDirs;
 
-fn addModule(module: modulesJSON.Module, makefile: fs.File, cwd: fs.Dir, allocator: mem.Allocator, t: std.StringHashMap(Language)) !void {
-    _ = cwd;
-    _ = allocator;
-
+fn addModule(module: modulesJSON.Module, makefile: fs.File, t: std.StringHashMap(Language)) !void {
     const not_compile_obj = switch (module.mtype) {
         ModType.Default, ModType.Executable => t.get(module.languages[0]).?.exe.obj == null,
         ModType.StaticLibrary => t.get(module.languages[0]).?.lib.obj == null,
@@ -81,13 +78,6 @@ fn addModule(module: modulesJSON.Module, makefile: fs.File, cwd: fs.Dir, allocat
 
         return;
     }
-
-    // var mdir = try cwd.openDir(module.name, .{ .iterate = true });
-    // defer mdir.close();
-
-    // // WARNING: each record must be freed manualy!!!
-    // var filelist = try listFiles(mdir, allocator);
-    // defer filelist.deinit();
 
     _ = try makefile.write(module.name);
     _ = try makefile.write("_SRC := ");
@@ -168,60 +158,6 @@ fn addModule(module: modulesJSON.Module, makefile: fs.File, cwd: fs.Dir, allocat
         }
         _ = try makefile.write("\n\n");
     }
-
-    // while (filelist.popOrNull()) |e| {
-    //     _ = try makefile.write("$(BUILD)/");
-    //     _ = try makefile.write(module.name);
-    //     _ = try makefile.write(".dir");
-    //     _ = try makefile.write(e[module.name.len..]);
-    //     _ = try makefile.write(".o ");
-    //     allocator.free(e);
-    // }
-
-    // switch (module.mtype) {
-    //     ModType.Default, ModType.Executable => {
-    //         _ = try makefile.write("\n\t$(CXX) -o $@ $^ $(LDFLAGS) -std=c++20\n\n");
-    //     },
-    //     ModType.StaticLibrary => {
-    //         _ = try makefile.write("\n\t$(AR) qc $@ $^\n\n");
-    //     },
-    //     ModType.SharedLibrary => {
-    //         _ = try makefile.write("\n\t$(CXX) -o $@ $^ $(LDFLAGS) -std=c++20 --shared\n\n");
-    //     },
-    // }
-
-    // _ = try makefile.write("$(BUILD)/");
-    // _ = try makefile.write(module.name);
-    // _ = try makefile.write(".dir/%.c.o: ");
-    // _ = try makefile.write(module.name);
-    // _ = try makefile.write("/%.c\n");
-    // _ = try makefile.write("\t$(CC) -c -o $@ $^ $(CFLAGS) $(cflags)");
-    // if (module.mtype == ModType.SharedLibrary)
-    //     _ = try makefile.write(" -fPIC");
-    // _ = try makefile.write("\n\n");
-
-    // _ = try makefile.write("$(BUILD)/");
-    // _ = try makefile.write(module.name);
-    // _ = try makefile.write(".dir/%.cpp.o: ");
-    // _ = try makefile.write(module.name);
-    // _ = try makefile.write("/%.cpp\n");
-    // _ = try makefile.write("\t$(CXX) -c -o $@ $^ $(CXXFLAGS) $(cxxflags)");
-    // if (module.mtype == ModType.SharedLibrary)
-    //     _ = try makefile.write(" -fPIC");
-    // _ = try makefile.write("\n\n");
-
-    // _ = try makefile.write("$(BUILD)/");
-    // _ = try makefile.write(module.name);
-    // _ = try makefile.write(".dir/%.zig.o: ");
-    // _ = try makefile.write(module.name);
-    // _ = try makefile.write("/%.zig\n");
-    // _ = try makefile.write("\t$(ZIG) build-obj -femit-bin=\"$@\" $^ --name $(notdir $^) -O ReleaseSmall");
-    // if (module.mtype == ModType.SharedLibrary) {
-    //     _ = try makefile.write(" -fPIC");
-    // } else {
-    //     _ = try makefile.write(" -fPIE");
-    // }
-    // _ = try makefile.write("\n\n");
 }
 
 pub fn make(cwd: fs.Dir, allocator: mem.Allocator, build: Build) !void {
@@ -331,6 +267,6 @@ pub fn make(cwd: fs.Dir, allocator: mem.Allocator, build: Build) !void {
     _ = try makefile.write("\t$(MKDIR) -p $@\n\n");
 
     for (modules.value) |module| {
-        try addModule(module, makefile, cwd, allocator, languages_map);
+        try addModule(module, makefile, languages_map);
     }
 }
