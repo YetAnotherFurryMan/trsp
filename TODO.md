@@ -6,13 +6,14 @@
 
 ## Version 1.1
  - [ ] help entry
+ - [ ] languages entry
+ - [x] custom languages
+ - [ ] register language
 
 ## Vrsion 1.x - Polishing
  - [ ] When registering template validate if languages are registered
  - [ ] When registering template validate if name is valid
- - [ ] template entry => register -t (--template) entry
- - [ ] register -l (--language)
- - [ ] register -m (--module)
+ - [ ] --register flag for modules, templates, languages
 
 # Version 2.0
  - [ ] project entry
