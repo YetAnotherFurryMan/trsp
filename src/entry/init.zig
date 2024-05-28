@@ -9,14 +9,16 @@ const Log = l.Log;
 const log = l.log;
 const logf = l.logf;
 
+const defaults = @import("../defaults.zig");
+
+const str = @import("../common/str.zig");
+
 const defaultBuildJSON = "{\"name\":\"${name}\",\"builder\":\"Ninja\"}";
 const defaultModulesJSON = "[]";
 const defaultProjectsJSON = "[]";
 
 const defaultTemplatesJSON = "[\"c\"]";
 const defaultLanguagesJSON = "[\"c\",\"cxx\",\"zig\"]";
-
-const defaults = @import("../defaults.zig");
 
 pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
     var cwd = fs.cwd();
@@ -30,6 +32,19 @@ pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
     } else if (args.len > 1) {
         logf(Log.Err, "Expected olny one argument, got {}.", .{args.len});
         return Err.TooManyArgs;
+    }
+
+    // Validate name
+    if (mem.eql(u8, name, ".")) {
+        name = "root";
+        log(Log.War, "Using default project name: \"root\"!");
+        log(Log.Inf, "To change project name use:");
+        log(Log.Inf, "    ./trsp config --project-name=$NAME");
+    }
+
+    if (!str.validName(name)) {
+        logf(Log.Err, "Name \"{s}\" is not valid!", .{name});
+        return Err.InvalidName;
     }
 
     cwd = fs.cwd();
@@ -58,13 +73,6 @@ pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
 
     var conf = try cwd.makeOpenPath("trsp.conf", .{});
     defer conf.close();
-
-    if (mem.eql(u8, name, ".")) {
-        name = "root";
-        log(Log.War, "Using default project name: \"root\"!");
-        log(Log.Inf, "To change project name use:");
-        log(Log.Inf, "    ./trsp config --project-name=$NAME");
-    }
 
     const myBuildJSON_size = mem.replacementSize(u8, defaultBuildJSON, "${name}", name);
     const myBuildJSON = try allocator.alloc(u8, myBuildJSON_size);

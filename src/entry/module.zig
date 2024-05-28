@@ -151,8 +151,18 @@ pub fn entry(argsx: [][:0]const u8, allocator: mem.Allocator) !void {
         return Err.NoName;
     }
 
+    if (!str.validName(name.?)) {
+        logf(Log.Err, "Name \"{s}\" is not valid.", .{name.?});
+        return Err.InvalidName;
+    }
+
     if (template == null) {
         template = "c";
+    }
+
+    if (!str.validNameExt(template.?)) {
+        logf(Log.Err, "Template name \"{s}\" is invalid.", .{template.?});
+        return Err.InvalidName;
     }
 
     if (modType == ModType.Default) {
@@ -222,9 +232,6 @@ pub fn entry(argsx: [][:0]const u8, allocator: mem.Allocator) !void {
 
     const name_copy = try str.copy(name.?, allocator);
     defer allocator.free(name_copy);
-
-    //var template_copy = try str.copy(template.?, allocator);
-    //defer template_copy.deinit();
 
     var mods = std.ArrayList(Module).init(allocator);
     defer mods.deinit();

@@ -10,16 +10,19 @@ const Log = l.Log;
 const log = l.log;
 const logf = l.logf;
 
+const default = @import("../defaults.zig");
+
 const templatesJSON = @import("../json/templates.json.zig");
 const TemplateFile = templatesJSON.TemplateFile;
 const Template = templatesJSON.Template;
 const NamedTemplate = struct { name: []const u8, tmpl: Template };
 
-const default = @import("../defaults.zig");
+const str = @import("../common/str.zig");
 
 const cla = @import("cla.zig");
 const ensureProject = @import("ensureProject.zig").ensureProject;
 
+// Use HashMap instead of ArrayLists
 pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
     try ensureProject();
 
@@ -56,14 +59,20 @@ pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
         logf(Log.Deb, "Arg {}: {?s}", arg);
 
         if (arg.id < 0) {
-            // TODO: !! Validate
             logf(Log.Deb, "Loading src: {s}", .{arg.value.?});
             const t = try templatesJSON.loadPath(cwd, arg.value.?, allocator);
             try parse_to_deinit.append(t);
 
-            const tt = NamedTemplate{ .name = fs.path.basename(arg.value.?), .tmpl = t.value };
+            const name = fs.path.basename(arg.value.?);
+            if (!str.validNameExt(name)) {
+                logf(Log.Err, "Template name \"{s}\" is invalid.", .{name});
+                log(Log.Inf, "Try renaming the file.");
+                continue;
+            }
+
+            const tt = NamedTemplate{ .name = name, .tmpl = t.value };
             try templates.append(tt);
-            try names.append(tt.name);
+            try names.append(name);
         } else if (mem.eql(u8, descriptions[@bitCast(arg.id)].long, "c++")) {
             const t = try json.parseFromSlice(Template, allocator, default.defaultCXXTemplate, .{});
             try parse_to_deinit.append(t);

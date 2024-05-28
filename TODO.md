@@ -4,15 +4,17 @@
  - [x] C++ support
  - [x] Zig support
 
+## Version 1.0.1
+ - [x] custom languages
+ - [x] name validation
+
 ## Version 1.1
  - [ ] help entry
  - [ ] languages entry
- - [x] custom languages
  - [ ] register language
 
 ## Vrsion 1.x - Polishing
  - [ ] When registering template validate if languages are registered
- - [ ] When registering template validate if name is valid
  - [ ] --register flag for modules, templates, languages
 
 # Version 2.0
@@ -60,10 +62,4 @@
 ## Build systems
  - [ ] CMake
  - [ ] XMake
-
-## Module generation
- - [ ] Module lists languages
- - [ ] Languages specifies commands
- - [ ] Modules are independent from templates
-
 
