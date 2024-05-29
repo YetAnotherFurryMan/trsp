@@ -10,12 +10,13 @@
 
 ## Version 1.1
  - [ ] help entry
- - [ ] languages entry
- - [ ] register language
+ - [ ] registering templates by config entry
+ - [ ] registering languages by config entry
 
 ## Vrsion 1.x - Polishing
  - [ ] When registering template validate if languages are registered
- - [ ] --register flag for modules, templates, languages
+ - [ ] When registering template validate if template is not duplicated
+ - [ ] --register flag for modules
 
 # Version 2.0
  - [ ] project entry
@@ -25,9 +26,6 @@
  - [ ] Fortran support
  - [ ] D support
  - [ ] Nasm support
-
-## Version 2.x - Polishing
- - [ ] register -p (--project)
 
 # Version 3.0
  - [ ] Scripting languages support
