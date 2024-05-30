@@ -7,7 +7,8 @@
 ## Version 1.0.1
  - [x] custom languages
  - [x] name validation
- - [x] --register flag for modules
+ - [x] --register flag for module entry
+ - [x] --register flag for init entry
 
 ## Version 1.1
  - [ ] help entry
@@ -60,10 +61,6 @@
 ## Build systems
  - [ ] CMake
  - [ ] XMake
-
-## init
- - [ ] CLA
- - [ ] --register
 
 ## Global falgs
  - [ ] --version

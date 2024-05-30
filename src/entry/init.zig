@@ -20,21 +20,77 @@ const defaultProjectsJSON = "[]";
 const defaultTemplatesJSON = "[\"c\"]";
 const defaultLanguagesJSON = "[\"c\",\"cxx\",\"zig\"]";
 
-// Use cla
-// --register
+const cla = @import("cla.zig");
 
-pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
+pub fn entry(argsx: [][:0]const u8, allocator: mem.Allocator) !void {
     var cwd = fs.cwd();
-    var name: []const u8 = ".";
 
-    if (args.len == 1) {
+    var args = argsx;
+    var name: []const u8 = ".";
+    var nameChanged = false;
+    var register: bool = false;
+
+    // The project name may be the first word after task, otherwise it is under -n flag or was not seted
+    if (args[0][0] != '-') {
         name = args[0];
+        nameChanged = true;
+        args = args[1..];
+
         var dir = try cwd.makeOpenPath(name, .{});
         defer dir.close();
         try dir.setAsCwd();
-    } else if (args.len > 1) {
-        logf(Log.Err, "Expected olny one argument, got {}.", .{args.len});
-        return Err.TooManyArgs;
+    }
+
+    log(Log.Deb, "Parsing command-line arguments...");
+
+    const descriptions = [_]cla.ArgDescription{
+        .{ .short = 'n', .long = "name" },
+        .{ .short = 'r', .long = "register" },
+    };
+
+    var argList = try cla.parse(args, &descriptions, allocator);
+    defer argList.deinit();
+
+    while (argList.popOrNull()) |arg| {
+        logf(Log.Deb, "Arg {}: {?s}", arg);
+
+        if (arg.id < 0) {
+            logf(Log.Err, "Unknown argument \"{?s}\"", .{arg.value});
+            return Err.BadArg;
+        }
+
+        switch (descriptions[@bitCast(arg.id)].short) {
+            'n' => {
+                if (nameChanged) {
+                    logf(Log.Err, "Module name already changed \"{?s}\" > \"{?s}\"", .{ name, arg.value });
+                    return Err.Changed;
+                }
+
+                if (arg.value == null) {
+                    log(Log.Err, "Excepted value.");
+                    log(Log.Note, "Try using \'=\' or delete space before the flag argument.");
+                    return Err.NoValue;
+                }
+
+                name = arg.value.?;
+
+                var dir = try cwd.makeOpenPath(name, .{});
+                defer dir.close();
+                try dir.setAsCwd();
+            },
+            'r' => {
+                if (register) {
+                    log(Log.Err, "Register flag already seted.");
+                    return Err.Changed;
+                }
+
+                register = true;
+            },
+            else => {
+                logf(Log.Err, "Unhandled argument \"{}:{?s}\"", arg);
+                return Err.BadArg;
+            },
+        }
     }
 
     // Validate name
@@ -72,37 +128,41 @@ pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
 
     try exeDir.copyFile(exe, cwd, "trsp", .{});
 
-    log(Log.Inf, "Generating configuration...");
+    if (!register) {
+        log(Log.Inf, "Generating configuration...");
 
-    var conf = try cwd.makeOpenPath("trsp.conf", .{});
-    defer conf.close();
+        var conf = try cwd.makeOpenPath("trsp.conf", .{});
+        defer conf.close();
 
-    const myBuildJSON_size = mem.replacementSize(u8, defaultBuildJSON, "${name}", name);
-    const myBuildJSON = try allocator.alloc(u8, myBuildJSON_size);
-    defer allocator.free(myBuildJSON);
-    _ = mem.replace(u8, defaultBuildJSON, "${name}", name, myBuildJSON);
+        const myBuildJSON_size = mem.replacementSize(u8, defaultBuildJSON, "${name}", name);
+        const myBuildJSON = try allocator.alloc(u8, myBuildJSON_size);
+        defer allocator.free(myBuildJSON);
+        _ = mem.replace(u8, defaultBuildJSON, "${name}", name, myBuildJSON);
 
-    try conf.writeFile("build.json", myBuildJSON);
-    try conf.writeFile("modules.json", defaultModulesJSON);
-    try conf.writeFile("projects.json", defaultProjectsJSON);
-    try conf.writeFile("templates.json", defaultTemplatesJSON);
-    try conf.writeFile("languages.json", defaultLanguagesJSON);
+        try conf.writeFile("build.json", myBuildJSON);
+        try conf.writeFile("modules.json", defaultModulesJSON);
+        try conf.writeFile("projects.json", defaultProjectsJSON);
+        try conf.writeFile("templates.json", defaultTemplatesJSON);
+        try conf.writeFile("languages.json", defaultLanguagesJSON);
 
-    var tmpls = try conf.makeOpenPath("templates", .{});
-    defer tmpls.close();
+        var tmpls = try conf.makeOpenPath("templates", .{});
+        defer tmpls.close();
 
-    try tmpls.writeFile("c.json", defaults.defaultCTemplate);
+        try tmpls.writeFile("c.json", defaults.defaultCTemplate);
 
-    var langs = try conf.makeOpenPath("languages", .{});
-    defer langs.close();
+        var langs = try conf.makeOpenPath("languages", .{});
+        defer langs.close();
 
-    try langs.writeFile("c.json", defaults.defaultCLanguage);
-    try langs.writeFile("cxx.json", defaults.defaultCXXLanguage);
-    try langs.writeFile("zig.json", defaults.defaultZigLanguage);
+        try langs.writeFile("c.json", defaults.defaultCLanguage);
+        try langs.writeFile("cxx.json", defaults.defaultCXXLanguage);
+        try langs.writeFile("zig.json", defaults.defaultZigLanguage);
 
-    logf(Log.Inf, "Succesfully generated project \"{s}\"!", .{name});
+        logf(Log.Inf, "Succesfully generated project \"{s}\"!", .{name});
 
-    log(Log.War, "TIPS:");
-    log(Log.Inf, "To initialize git use:");
-    log(Log.Inf, "    ./trsp config --git");
+        log(Log.War, "TIPS:");
+        log(Log.Inf, "To initialize git use:");
+        log(Log.Inf, "    ./trsp config --git");
+    } else {
+        logf(Log.Inf, "Successfully registered project \"{s}\"!", .{name});
+    }
 }
