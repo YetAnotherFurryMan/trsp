@@ -22,6 +22,8 @@
 # Version 2.0
  - [ ] project entry
  - [ ] Radicle support
+ - [ ] Link two modules (exe + lib(s)) (internal dependences)
+ - [ ] External dependences support (git)
  - [ ] Bash support (as build system)
  - [ ] Rust support
  - [ ] Fortran support
@@ -49,7 +51,6 @@
  - [x] init entry
  - [x] creating module
  - [x] C support
- - [x] CMake support
  - [x] Make support
  - [x] Ninja support
  - [x] renaming project (config entry)
