@@ -44,6 +44,7 @@ pub fn entry(argsx: [][:0]const u8, allocator: mem.Allocator) !void {
     var nameChanged = false;
     var template: ?[]const u8 = null;
     var modType: ModType = ModType.Default;
+    var register: bool = false;
 
     // The module name may be the first word after task, otherwise it is under -n flag
     if (args[0][0] != '-') {
@@ -52,7 +53,7 @@ pub fn entry(argsx: [][:0]const u8, allocator: mem.Allocator) !void {
         args = args[1..];
     }
 
-    log(Log.Inf, "Parsing command-line arguments...");
+    log(Log.Deb, "Parsing command-line arguments...");
 
     const descriptions = [_]cla.ArgDescription{
         .{ .short = 'n', .long = "name" },
@@ -60,6 +61,7 @@ pub fn entry(argsx: [][:0]const u8, allocator: mem.Allocator) !void {
         .{ .short = 'e', .long = "exe" },
         .{ .short = 'l', .long = "lib" },
         .{ .short = 'd', .long = "dll" },
+        .{ .short = 'r', .long = "register" },
     };
 
     var argList = try cla.parse(args, &descriptions, allocator);
@@ -128,6 +130,14 @@ pub fn entry(argsx: [][:0]const u8, allocator: mem.Allocator) !void {
 
                 modType = ModType.SharedLibrary;
             },
+            'r' => {
+                if (register) {
+                    log(Log.Err, "Register flag already seted.");
+                    return Err.Changed;
+                }
+
+                register = true;
+            },
             else => {
                 logf(Log.Err, "Unhandled argument \"{}:{?s}\"", arg);
                 return Err.BadArg;
@@ -151,8 +161,18 @@ pub fn entry(argsx: [][:0]const u8, allocator: mem.Allocator) !void {
         return Err.NoName;
     }
 
+    if (!str.validName(name.?)) {
+        logf(Log.Err, "Name \"{s}\" is not valid.", .{name.?});
+        return Err.InvalidName;
+    }
+
     if (template == null) {
         template = "c";
+    }
+
+    if (!str.validNameExt(template.?)) {
+        logf(Log.Err, "Template name \"{s}\" is invalid.", .{template.?});
+        return Err.InvalidName;
     }
 
     if (modType == ModType.Default) {
@@ -203,42 +223,33 @@ pub fn entry(argsx: [][:0]const u8, allocator: mem.Allocator) !void {
         return Err.BadTemplate;
     }
 
-    logf(Log.Inf, "Generating module \"{s}\"...", .{name.?});
+    if (!register) {
+        logf(Log.Inf, "Generating module \"{s}\"...", .{name.?});
 
-    var moduleDir = try cwd.makeOpenPath(name.?, .{});
-    defer moduleDir.close();
+        var moduleDir = try cwd.makeOpenPath(name.?, .{});
+        defer moduleDir.close();
 
-    const tmplMode = switch (modType) {
-        ModType.Executable => tmpl.?.value.exe,
-        ModType.SharedLibrary => tmpl.?.value.shared,
-        ModType.StaticLibrary => tmpl.?.value.static,
-        else => {
-            log(Log.Err, "Unhandled modType...");
-            return Err.Unreachable;
-        },
-    };
-
-    for (tmplMode.src) |file| {
-        try templatesJSON.write(moduleDir, allocator, file, name.?);
-    }
-
-    for (tmplMode.head) |file| {
-        try templatesJSON.write(cwd, allocator, file, name.?);
+        try switch (modType) {
+            ModType.Executable => templatesJSON.createWrite(moduleDir, allocator, tmpl.?.value.exe, name.?),
+            ModType.SharedLibrary => templatesJSON.createWrite(moduleDir, allocator, tmpl.?.value.shared, name.?),
+            ModType.StaticLibrary => templatesJSON.createWrite(moduleDir, allocator, tmpl.?.value.static, name.?),
+            else => {
+                log(Log.Err, "Unhandled modType...");
+                return Err.Unreachable;
+            },
+        };
     }
 
     logf(Log.Inf, "Registering module \"{s}\"...", .{name.?});
 
-    var name_copy = try str.copy(name.?, allocator);
-    defer name_copy.deinit();
-
-    var template_copy = try str.copy(template.?, allocator);
-    defer template_copy.deinit();
+    const name_copy = try str.copy(name.?, allocator);
+    defer allocator.free(name_copy);
 
     var mods = std.ArrayList(Module).init(allocator);
     defer mods.deinit();
 
     try mods.appendSlice(modules.value);
-    try mods.append(.{ .name = name_copy.items, .template = template_copy.items, .libs = &[_][]u8{}, .mtype = modType });
+    try mods.append(.{ .name = name_copy, .languages = tmpl.?.value.languages, .libs = &[_][]u8{}, .mtype = modType });
 
     var file = try cwd.openFile("trsp.conf/modules.json", .{ .mode = fs.File.OpenMode.write_only });
     defer file.close();

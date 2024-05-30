@@ -17,4 +17,5 @@ pub const Err = error{
     Unreachable,
     ChildError,
     CannotPerform,
+    InvalidName,
 };

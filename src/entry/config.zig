@@ -27,7 +27,12 @@ pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
 
     const cwd = fs.cwd();
 
-    const descriptions = [_]cla.ArgDescription{ .{ .short = 0, .long = "project-name" }, .{ .short = 0, .long = "git" } };
+    const descriptions = [_]cla.ArgDescription{
+        .{ .short = 0, .long = "project-name" },
+        .{ .short = 0, .long = "git" },
+        .{ .short = 't', .long = "register-template" },
+        .{ .short = 'l', .long = "register-language" },
+    };
 
     var argList = try cla.parse(args, &descriptions, allocator);
     defer argList.deinit();
@@ -40,69 +45,117 @@ pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
             return Err.BadArg;
         }
 
-        const a = descriptions[@bitCast(arg.id)].long;
-        if (mem.eql(u8, a, "project-name")) {
-            if (arg.value == null) {
-                log(Log.Err, "Excepted value.");
-                log(Log.Note, "Try using \'=\' or delete space before the flag argument.");
-                return Err.NoValue;
-            }
+        const short = descriptions[@bitCast(arg.id)].short;
+        if (short == 0) {
+            const a = descriptions[@bitCast(arg.id)].long;
+            if (mem.eql(u8, a, "project-name")) {
+                if (arg.value == null) {
+                    log(Log.Err, "Excepted value.");
+                    log(Log.Note, "Try using \'=\' or delete space before the flag argument.");
+                    return Err.NoValue;
+                }
 
-            var build = try loadBuild(cwd, allocator);
-            defer build.deinit();
+                try rename(cwd, allocator, arg.value.?);
+            } else if (mem.eql(u8, a, "git")) {
+                if (arg.value != null) {
+                    log(Log.Err, "Unexpected value for 'git' flag.");
+                    return Err.BadArg;
+                }
 
-            var name_cpy = try str.copy(arg.value.?, allocator);
-            defer name_cpy.deinit();
-
-            const newBuild: Build = .{
-                .name = name_cpy.items,
-                .builder = build.value.builder,
-            };
-
-            log(Log.Inf, "Updating trsp.conf/build.json");
-
-            var file = try cwd.openFile("trsp.conf/build.json", .{ .mode = fs.File.OpenMode.write_only });
-            defer file.close();
-
-            var writer = file.writer();
-            try json.stringify(newBuild, .{}, writer);
-            _ = try writer.write("\n"); // Wreid error with additional } at the end of file
-
-            log(Log.Inf, "Done");
-        } else if (mem.eql(u8, a, "git")) {
-            if (arg.value != null) {
-                log(Log.Err, "Unexpected value for 'git' flag.");
+                try git(cwd);
+            } else {
+                logf(Log.Err, "Unhandled argument \"{}:{?s}\"", arg);
                 return Err.BadArg;
             }
+        } else {
+            switch (short) {
+                't' => {
+                    if (arg.value == null) {
+                        log(Log.Err, "Excepted value.");
+                        log(Log.Note, "Try using \'=\' or delete space before the flag argument.");
+                        return Err.NoValue;
+                    }
 
-            var accessed = true;
-            cwd.access(".git", .{}) catch |e| switch (e) {
-                fs.Dir.AccessError.FileNotFound => {
-                    accessed = false;
+                    try registerTemplate(cwd, allocator, arg.value.?);
+                },
+                'l' => {
+                    if (arg.value == null) {
+                        log(Log.Err, "Excepted value.");
+                        log(Log.Note, "Try using \'=\' or delete space before the flag argument.");
+                        return Err.NoValue;
+                    }
 
-                    log(Log.Inf, "Initializing git...");
-                    try child.run(&[_][]const u8{ "git", "init" });
-
-                    log(Log.Inf, "Creating .gitignore...");
-                    try cwd.writeFile(".gitignore", default_gitignore);
+                    try registerLanguage(cwd, allocator, arg.value.?);
                 },
                 else => {
-                    log(Log.Err, "Unknown error.");
-                    return e;
+                    logf(Log.Err, "Unhandled argument \"{}:{?s}\"", arg);
+                    return Err.BadArg;
                 },
-            };
-
-            if (accessed) {
-                log(Log.Err, "Git already initiated!");
-                return Err.CannotPerform;
             }
-
-            log(Log.Inf, "Done");
-        } else {
-            logf(Log.Err, "Unhandled argument \"{}:{?s}\"", arg);
-            return Err.BadArg;
         }
     }
 
     log(Log.Inf, "Succefully reconfigured.");
+}
+
+fn rename(cwd: fs.Dir, allocator: mem.Allocator, name: []const u8) !void {
+    var build = try loadBuild(cwd, allocator);
+    defer build.deinit();
+
+    const name_cpy = try str.copy(name, allocator);
+    defer allocator.free(name_cpy);
+
+    const newBuild: Build = .{
+        .name = name_cpy,
+        .builder = build.value.builder,
+    };
+
+    log(Log.Inf, "Updating trsp.conf/build.json");
+
+    var file = try cwd.openFile("trsp.conf/build.json", .{ .mode = fs.File.OpenMode.write_only });
+    defer file.close();
+
+    var writer = file.writer();
+    try json.stringify(newBuild, .{}, writer);
+    _ = try writer.write("\n"); // Wreid error with additional } at the end of file
+
+    log(Log.Inf, "Done");
+}
+
+fn git(cwd: fs.Dir) !void {
+    var accessed = true;
+    cwd.access(".git", .{}) catch |e| switch (e) {
+        fs.Dir.AccessError.FileNotFound => {
+            accessed = false;
+
+            log(Log.Inf, "Initializing git...");
+            try child.run(&[_][]const u8{ "git", "init" });
+
+            log(Log.Inf, "Creating .gitignore...");
+            try cwd.writeFile(".gitignore", default_gitignore);
+        },
+        else => {
+            log(Log.Err, "Unknown error.");
+            return e;
+        },
+    };
+
+    if (accessed) {
+        log(Log.Err, "Git already initiated!");
+        return Err.CannotPerform;
+    }
+
+    log(Log.Inf, "Done");
+}
+
+fn registerTemplate(cwd: fs.Dir, allocator: mem.Allocator, path: []const u8) !void {
+    _ = cwd;
+    _ = allocator;
+    _ = path;
+}
+
+fn registerLanguage(cwd: fs.Dir, allocator: mem.Allocator, path: []const u8) !void {
+    _ = cwd;
+    _ = allocator;
+    _ = path;
 }

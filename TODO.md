@@ -4,17 +4,24 @@
  - [x] C++ support
  - [x] Zig support
 
-## Version 1.1
- - [ ] Create project
- - [ ] help entry
+## Version 1.0.1
+ - [x] custom languages
+ - [x] name validation
+ - [x] --register flag for module entry
+ - [x] --register flag for init entry
 
-## Version 1.2
- - [ ] Register module
- - [ ] Register project
+## Version 1.1
+ - [ ] help entry
+ - [ ] registering templates by config entry
+ - [ ] registering languages by config entry
+
+## Vrsion 1.x - Polishing
+ - [ ] When registering template validate if languages are registered
+ - [ ] When registering template validate if template is not duplicated
 
 # Version 2.0
+ - [ ] project entry
  - [ ] Radicle support
- - [ ] Custom languages
  - [ ] Bash support (as build system)
  - [ ] Rust support
  - [ ] Fortran support
@@ -55,9 +62,8 @@
  - [ ] CMake
  - [ ] XMake
 
-## Module generation
- - [ ] Module lists languages
- - [ ] Languages specifies commands
- - [ ] Modules are independent from templates
+## Global falgs
+ - [ ] --version
+ - [ ] --help
 
 

@@ -9,24 +9,101 @@ const Log = l.Log;
 const log = l.log;
 const logf = l.logf;
 
+const defaults = @import("../defaults.zig");
+
+const str = @import("../common/str.zig");
+
 const defaultBuildJSON = "{\"name\":\"${name}\",\"builder\":\"Ninja\"}";
 const defaultModulesJSON = "[]";
 const defaultProjectsJSON = "[]";
+
 const defaultTemplatesJSON = "[\"c\"]";
-const defaultCTemplate = "{\"mod\":\"CompileAll\",\"exe\":{\"head\":[],\"src\":[{\"name\":\"main.c\",\"cnt\":\"#include <stdio.h>\\n\\nint main(int argc, const char** argv){\\n    printf(\\\"Hello World!\\\\n\\\");\\n    return 0;\\n}\\n\"}],\"main\":\"main.c\"},\"shared\":{\"head\":[{\"name\":\"${module}.h\",\"cnt\":\"#ifndef _${module}_H_\\n#define _${module}_H_\\n\\nvoid hello();\\n\\n#endif\"}],\"src\":[{\"name\":\"${module}.c\",\"cnt\":\"#include <stdio.h>\\n\\nvoid hello(){\\n    printf(\\\"Hello World!\\\\n\\\");\\n}\\n\"}],\"main\":\"${module}.c\"},\"static\":{\"head\":[{\"name\":\"${module}.h\",\"cnt\":\"#ifndef _${module}_H_\\n#define _${module}_H_\\n\\nvoid hello();\\n\\n#endif\"}],\"src\":[{\"name\":\"${module}.c\",\"cnt\":\"#include <stdio.h>\\n\\nvoid hello(){\\n    printf(\\\"Hello World!\\\\n\\\");\\n}\\n\"}],\"main\":\"${module}\"}}";
+const defaultLanguagesJSON = "[\"c\",\"cxx\",\"zig\"]";
 
-pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
+const cla = @import("cla.zig");
+
+pub fn entry(argsx: [][:0]const u8, allocator: mem.Allocator) !void {
     var cwd = fs.cwd();
-    var name: []const u8 = ".";
 
-    if (args.len == 1) {
+    var args = argsx;
+    var name: []const u8 = ".";
+    var nameChanged = false;
+    var register: bool = false;
+
+    // The project name may be the first word after task, otherwise it is under -n flag or was not seted
+    if (args[0][0] != '-') {
         name = args[0];
+        nameChanged = true;
+        args = args[1..];
+
         var dir = try cwd.makeOpenPath(name, .{});
         defer dir.close();
         try dir.setAsCwd();
-    } else if (args.len > 1) {
-        logf(Log.Err, "Expected olny one argument, got {}.", .{args.len});
-        return Err.TooManyArgs;
+    }
+
+    log(Log.Deb, "Parsing command-line arguments...");
+
+    const descriptions = [_]cla.ArgDescription{
+        .{ .short = 'n', .long = "name" },
+        .{ .short = 'r', .long = "register" },
+    };
+
+    var argList = try cla.parse(args, &descriptions, allocator);
+    defer argList.deinit();
+
+    while (argList.popOrNull()) |arg| {
+        logf(Log.Deb, "Arg {}: {?s}", arg);
+
+        if (arg.id < 0) {
+            logf(Log.Err, "Unknown argument \"{?s}\"", .{arg.value});
+            return Err.BadArg;
+        }
+
+        switch (descriptions[@bitCast(arg.id)].short) {
+            'n' => {
+                if (nameChanged) {
+                    logf(Log.Err, "Module name already changed \"{?s}\" > \"{?s}\"", .{ name, arg.value });
+                    return Err.Changed;
+                }
+
+                if (arg.value == null) {
+                    log(Log.Err, "Excepted value.");
+                    log(Log.Note, "Try using \'=\' or delete space before the flag argument.");
+                    return Err.NoValue;
+                }
+
+                name = arg.value.?;
+
+                var dir = try cwd.makeOpenPath(name, .{});
+                defer dir.close();
+                try dir.setAsCwd();
+            },
+            'r' => {
+                if (register) {
+                    log(Log.Err, "Register flag already seted.");
+                    return Err.Changed;
+                }
+
+                register = true;
+            },
+            else => {
+                logf(Log.Err, "Unhandled argument \"{}:{?s}\"", arg);
+                return Err.BadArg;
+            },
+        }
+    }
+
+    // Validate name
+    if (mem.eql(u8, name, ".")) {
+        name = "root";
+        log(Log.War, "Using default project name: \"root\"!");
+        log(Log.Inf, "To change project name use:");
+        log(Log.Inf, "    ./trsp config --project-name=$NAME");
+    }
+
+    if (!str.validName(name)) {
+        logf(Log.Err, "Name \"{s}\" is not valid!", .{name});
+        return Err.InvalidName;
     }
 
     cwd = fs.cwd();
@@ -51,36 +128,41 @@ pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
 
     try exeDir.copyFile(exe, cwd, "trsp", .{});
 
-    log(Log.Inf, "Generating configuration...");
+    if (!register) {
+        log(Log.Inf, "Generating configuration...");
 
-    var conf = try cwd.makeOpenPath("trsp.conf", .{});
-    defer conf.close();
+        var conf = try cwd.makeOpenPath("trsp.conf", .{});
+        defer conf.close();
 
-    if (mem.eql(u8, name, ".")) {
-        name = "root";
-        log(Log.War, "Using default project name: \"root\"!");
-        log(Log.Inf, "To change project name use:");
-        log(Log.Inf, "    ./trsp config --project-name=$NAME");
+        const myBuildJSON_size = mem.replacementSize(u8, defaultBuildJSON, "${name}", name);
+        const myBuildJSON = try allocator.alloc(u8, myBuildJSON_size);
+        defer allocator.free(myBuildJSON);
+        _ = mem.replace(u8, defaultBuildJSON, "${name}", name, myBuildJSON);
+
+        try conf.writeFile("build.json", myBuildJSON);
+        try conf.writeFile("modules.json", defaultModulesJSON);
+        try conf.writeFile("projects.json", defaultProjectsJSON);
+        try conf.writeFile("templates.json", defaultTemplatesJSON);
+        try conf.writeFile("languages.json", defaultLanguagesJSON);
+
+        var tmpls = try conf.makeOpenPath("templates", .{});
+        defer tmpls.close();
+
+        try tmpls.writeFile("c.json", defaults.defaultCTemplate);
+
+        var langs = try conf.makeOpenPath("languages", .{});
+        defer langs.close();
+
+        try langs.writeFile("c.json", defaults.defaultCLanguage);
+        try langs.writeFile("cxx.json", defaults.defaultCXXLanguage);
+        try langs.writeFile("zig.json", defaults.defaultZigLanguage);
+
+        logf(Log.Inf, "Succesfully generated project \"{s}\"!", .{name});
+
+        log(Log.War, "TIPS:");
+        log(Log.Inf, "To initialize git use:");
+        log(Log.Inf, "    ./trsp config --git");
+    } else {
+        logf(Log.Inf, "Successfully registered project \"{s}\"!", .{name});
     }
-
-    const myBuildJSON_size = mem.replacementSize(u8, defaultBuildJSON, "${name}", name);
-    const myBuildJSON = try allocator.alloc(u8, myBuildJSON_size);
-    defer allocator.free(myBuildJSON);
-    _ = mem.replace(u8, defaultBuildJSON, "${name}", name, myBuildJSON);
-
-    try conf.writeFile("build.json", myBuildJSON);
-    try conf.writeFile("modules.json", defaultModulesJSON);
-    try conf.writeFile("projects.json", defaultProjectsJSON);
-    try conf.writeFile("templates.json", defaultTemplatesJSON);
-
-    var tmpls = try conf.makeOpenPath("templates", .{});
-    defer tmpls.close();
-
-    try tmpls.writeFile("c.json", defaultCTemplate);
-
-    logf(Log.Inf, "Succesfully generated project \"{s}\"!", .{name});
-
-    log(Log.War, "TIPS:");
-    log(Log.Inf, "To initialize git use:");
-    log(Log.Inf, "    ./trsp config --git");
 }
