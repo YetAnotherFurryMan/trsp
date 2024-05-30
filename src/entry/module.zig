@@ -44,6 +44,7 @@ pub fn entry(argsx: [][:0]const u8, allocator: mem.Allocator) !void {
     var nameChanged = false;
     var template: ?[]const u8 = null;
     var modType: ModType = ModType.Default;
+    var register: bool = false;
 
     // The module name may be the first word after task, otherwise it is under -n flag
     if (args[0][0] != '-') {
@@ -52,7 +53,7 @@ pub fn entry(argsx: [][:0]const u8, allocator: mem.Allocator) !void {
         args = args[1..];
     }
 
-    log(Log.Inf, "Parsing command-line arguments...");
+    log(Log.Deb, "Parsing command-line arguments...");
 
     const descriptions = [_]cla.ArgDescription{
         .{ .short = 'n', .long = "name" },
@@ -60,6 +61,7 @@ pub fn entry(argsx: [][:0]const u8, allocator: mem.Allocator) !void {
         .{ .short = 'e', .long = "exe" },
         .{ .short = 'l', .long = "lib" },
         .{ .short = 'd', .long = "dll" },
+        .{ .short = 'r', .long = "register" },
     };
 
     var argList = try cla.parse(args, &descriptions, allocator);
@@ -127,6 +129,14 @@ pub fn entry(argsx: [][:0]const u8, allocator: mem.Allocator) !void {
                 }
 
                 modType = ModType.SharedLibrary;
+            },
+            'r' => {
+                if (register) {
+                    log(Log.Err, "Register flag already seted.");
+                    return Err.Changed;
+                }
+
+                register = true;
             },
             else => {
                 logf(Log.Err, "Unhandled argument \"{}:{?s}\"", arg);
@@ -213,20 +223,22 @@ pub fn entry(argsx: [][:0]const u8, allocator: mem.Allocator) !void {
         return Err.BadTemplate;
     }
 
-    logf(Log.Inf, "Generating module \"{s}\"...", .{name.?});
+    if (!register) {
+        logf(Log.Inf, "Generating module \"{s}\"...", .{name.?});
 
-    var moduleDir = try cwd.makeOpenPath(name.?, .{});
-    defer moduleDir.close();
+        var moduleDir = try cwd.makeOpenPath(name.?, .{});
+        defer moduleDir.close();
 
-    try switch (modType) {
-        ModType.Executable => templatesJSON.createWrite(moduleDir, allocator, tmpl.?.value.exe, name.?),
-        ModType.SharedLibrary => templatesJSON.createWrite(moduleDir, allocator, tmpl.?.value.shared, name.?),
-        ModType.StaticLibrary => templatesJSON.createWrite(moduleDir, allocator, tmpl.?.value.static, name.?),
-        else => {
-            log(Log.Err, "Unhandled modType...");
-            return Err.Unreachable;
-        },
-    };
+        try switch (modType) {
+            ModType.Executable => templatesJSON.createWrite(moduleDir, allocator, tmpl.?.value.exe, name.?),
+            ModType.SharedLibrary => templatesJSON.createWrite(moduleDir, allocator, tmpl.?.value.shared, name.?),
+            ModType.StaticLibrary => templatesJSON.createWrite(moduleDir, allocator, tmpl.?.value.static, name.?),
+            else => {
+                log(Log.Err, "Unhandled modType...");
+                return Err.Unreachable;
+            },
+        };
+    }
 
     logf(Log.Inf, "Registering module \"{s}\"...", .{name.?});
 

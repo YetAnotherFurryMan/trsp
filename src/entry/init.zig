@@ -20,6 +20,9 @@ const defaultProjectsJSON = "[]";
 const defaultTemplatesJSON = "[\"c\"]";
 const defaultLanguagesJSON = "[\"c\",\"cxx\",\"zig\"]";
 
+// Use cla
+// --register
+
 pub fn entry(args: [][:0]const u8, allocator: mem.Allocator) !void {
     var cwd = fs.cwd();
     var name: []const u8 = ".";

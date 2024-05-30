@@ -7,6 +7,7 @@
 ## Version 1.0.1
  - [x] custom languages
  - [x] name validation
+ - [x] --register flag for modules
 
 ## Version 1.1
  - [ ] help entry
@@ -16,7 +17,6 @@
 ## Vrsion 1.x - Polishing
  - [ ] When registering template validate if languages are registered
  - [ ] When registering template validate if template is not duplicated
- - [ ] --register flag for modules
 
 # Version 2.0
  - [ ] project entry
@@ -60,4 +60,13 @@
 ## Build systems
  - [ ] CMake
  - [ ] XMake
+
+## init
+ - [ ] CLA
+ - [ ] --register
+
+## Global falgs
+ - [ ] --version
+ - [ ] --help
+
 
